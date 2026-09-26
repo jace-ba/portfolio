@@ -54,9 +54,24 @@ const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
   </body>
 </html>
 
+<script>
+  import '../scripts/page-swap';
+</script>
+
 <style>
   main {
     padding-block: var(--space-8);
+  }
+
+  main:global(.page-enter) {
+    animation: page-enter 200ms var(--ease-press) both;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
   }
 
   .site-footer {

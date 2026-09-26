@@ -25,8 +25,8 @@ import { navItems, isCurrentPath } from '../lib/nav';
 <script>
   import { isCurrentPath } from '../lib/nav';
 
-  // The header persists across ClientRouter navigations, so the seated
-  // button is updated here instead of being re-rendered by the server.
+  // The header stays in the document across navigations (see page-swap.ts),
+  // so the seated button is updated here instead of being re-rendered.
   function seat(pathname: string) {
     document.querySelectorAll<HTMLAnchorElement>('.site-nav a.iso-btn').forEach((link) => {
       const current = isCurrentPath(link.getAttribute('href') ?? '', pathname);
@@ -36,8 +36,8 @@ import { navItems, isCurrentPath } from '../lib/nav';
     });
   }
 
-  // Seat the destination as soon as navigation starts so the clicked button
-  // stays down instead of springing up while the next page loads.
+  // Seat the destination as soon as navigation starts; the old button's
+  // release keeps running while the next page loads and swaps in.
   document.addEventListener('astro:before-preparation', (e) => seat(e.to.pathname));
   document.addEventListener('astro:after-swap', () => seat(location.pathname));
 </script>
