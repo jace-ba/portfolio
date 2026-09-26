@@ -3,9 +3,9 @@
 
    Accents are one tetradic rectangle in OKLCH: orange/blue and red/green
    are the two complementary pairs. All four share one lightness and chroma
-   per theme so they read as equally muted. Contrast (WCAG AA, 4.5:1) was
-   checked for --on-accent over each accent and for each --*-ink over
-   --bg and --surface; re-check if you change the L or C values. */
+   per theme. Contrast (WCAG AA, 4.5:1) was checked for --on-accent over
+   each accent and for each --*-ink over --bg and --surface; re-check if
+   you change the L or C values. */
 
 :root {
   color-scheme: light;
@@ -15,11 +15,11 @@
   --hue-green: 145;
   --hue-blue: 250;
 
-  --accent-l: 0.55;
-  --accent-hover-l: 0.58;
-  --accent-ink-l: 0.48;
-  --accent-c: 0.1;
-  --on-accent: #ffffff;
+  --accent-l: 0.66;
+  --accent-hover-l: 0.7;
+  --accent-ink-l: 0.46;
+  --accent-c: 0.16;
+  --on-accent: #2a2420;
 
   --bg: #f6f1ea;
   --surface: #fffaf3;
@@ -31,17 +31,15 @@
   --neutral: #e6ddd0;
   --neutral-hover: #ebe3d8;
   --neutral-ink: #3a322c;
-
-  --card-shadow: 0 1px 0 rgb(60 40 20 / 0.04), 0 12px 32px -16px rgb(60 40 20 / 0.18);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --accent-l: 0.72;
-  --accent-hover-l: 0.75;
-  --accent-ink-l: 0.78;
-  --accent-c: 0.09;
+  --accent-l: 0.78;
+  --accent-hover-l: 0.82;
+  --accent-ink-l: 0.82;
+  --accent-c: 0.15;
   --on-accent: #1a1816;
 
   --bg: #1a1816;
@@ -56,8 +54,6 @@
   --neutral-ink: #efe9e2;
   /* a lighter mix than the accents so the edge still separates from --surface */
   --neutral-edge: color-mix(in oklch, var(--neutral) 80%, black);
-
-  --card-shadow: 0 1px 0 rgb(0 0 0 / 0.2), 0 12px 32px -16px rgb(0 0 0 / 0.6);
 }
 
 :root {
@@ -118,8 +114,7 @@
   --space-8: 4rem;
   --space-9: 6rem;
 
-  /* ---- type (typeface is still an open decision; system stack for now) ---- */
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Rubik Variable", system-ui, sans-serif;
   --font-display: var(--font-sans);
 
   --text-xs: 0.75rem;
