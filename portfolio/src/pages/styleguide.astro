@@ -1,0 +1,154 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import IsoButton from '../components/IsoButton.astro';
+import Icon from '../components/Icon.astro';
+import Tag from '../components/Tag.astro';
+
+const accents = ['orange', 'red', 'blue', 'green'] as const;
+const variants = ['neutral', ...accents] as const;
+const radii = ['sm', 'md', 'lg', 'xl'] as const;
+---
+
+<BaseLayout title="Style guide">
+  <section class="block">
+    <p class="eyebrow">Tokens</p>
+    <h1>Style guide</h1>
+    <p class="lede">Every color, radius, and button variant in one place. Toggle the theme to check both.</p>
+  </section>
+
+  <section class="block">
+    <h2>Accents</h2>
+    <div class="swatches">
+      {
+        accents.map((a) => (
+          <div class="swatch">
+            <div class="chip" style={`background: var(--${a})`} />
+            <div class="chip chip--half" style={`background: var(--${a}-hover)`} />
+            <div class="chip chip--half" style={`background: var(--${a}-edge)`} />
+            <p class="tint" style={`background: var(--${a}-tint); color: var(--${a}-ink)`}>
+              <strong>{a}</strong> ink on tint
+            </p>
+            <p>
+              <Tag accent={a}>{a} tag</Tag>
+            </p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Neutrals</h2>
+    <div class="swatches">
+      {
+        ['bg', 'surface', 'surface-sunken', 'line', 'neutral', 'muted', 'ink'].map((n) => (
+          <div class="swatch">
+            <div class="chip chip--outlined" style={`background: var(--${n})`} />
+            <p>--{n}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Radii</h2>
+    <div class="radii">
+      {
+        radii.map((r) => (
+          <div class="radius" style={`border-radius: var(--radius-${r})`}>
+            --radius-{r}
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Buttons</h2>
+    <div class="row">
+      {variants.map((v) => <IsoButton variant={v}>{v}</IsoButton>)}
+    </div>
+    <div class="row">
+      {
+        variants.map((v) => (
+          <IsoButton variant={v} pressed>
+            {v} pressed
+          </IsoButton>
+        ))
+      }
+    </div>
+    <div class="row">
+      <IsoButton size="square"><Icon name="home" />Square</IsoButton>
+      <IsoButton size="square" pressed><Icon name="grid" />Pressed</IsoButton>
+      <IsoButton size="icon" aria-label="Mail"><Icon name="mail" /></IsoButton>
+      <IsoButton href="#" variant="orange"><Icon name="arrowRight" />Link button</IsoButton>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .block {
+    display: grid;
+    gap: var(--space-4);
+    margin-bottom: var(--space-7);
+  }
+
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .swatch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+  }
+  .swatch p {
+    grid-column: 1 / -1;
+  }
+  .swatch .tint {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+  }
+
+  .chip {
+    grid-column: 1 / -1;
+    height: 72px;
+    border-radius: var(--radius-md);
+  }
+  .chip--half {
+    grid-column: auto;
+    height: 32px;
+    border-radius: var(--radius-sm);
+  }
+  .chip--outlined {
+    border: 1px solid var(--line);
+  }
+
+  .radii {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+  .radius {
+    display: grid;
+    place-items: center;
+    width: 140px;
+    height: 100px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    text-transform: capitalize;
+  }
+</style>

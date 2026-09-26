@@ -1,0 +1,43 @@
+---
+import IsoButton from './IsoButton.astro';
+import Icon from './Icon.astro';
+import { navItems, isCurrentPath } from '../lib/nav';
+---
+
+<nav class="site-nav" aria-label="Main">
+  {
+    navItems.map((item) => (
+      <IsoButton href={item.href} size="square" pressed={isCurrentPath(item.href, Astro.url.pathname)}>
+        <Icon name={item.icon} />
+        {item.label}
+      </IsoButton>
+    ))
+  }
+</nav>
+
+<style>
+  .site-nav {
+    display: flex;
+    gap: var(--space-3);
+  }
+</style>
+
+<script>
+  import { isCurrentPath } from '../lib/nav';
+
+  // The header persists across ClientRouter navigations, so the seated
+  // button is updated here instead of being re-rendered by the server.
+  function seat(pathname: string) {
+    document.querySelectorAll<HTMLAnchorElement>('.site-nav a.iso-btn').forEach((link) => {
+      const current = isCurrentPath(link.getAttribute('href') ?? '', pathname);
+      link.classList.toggle('is-pressed', current);
+      if (current) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
+  // Seat the destination as soon as navigation starts so the clicked button
+  // stays down instead of springing up while the next page loads.
+  document.addEventListener('astro:before-preparation', (e) => seat(e.to.pathname));
+  document.addEventListener('astro:after-swap', () => seat(location.pathname));
+</script>

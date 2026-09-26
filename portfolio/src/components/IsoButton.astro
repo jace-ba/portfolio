@@ -1,0 +1,191 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+type Variant = 'neutral' | 'orange' | 'red' | 'blue' | 'green';
+type Size = 'pill' | 'square' | 'icon';
+
+interface Props extends Omit<HTMLAttributes<'button'>, 'class'> {
+  href?: string;
+  download?: boolean | string;
+  target?: string;
+  rel?: string;
+  variant?: Variant;
+  size?: Size;
+  /** Seated in the fully-pressed position (current page, active toggle). */
+  pressed?: boolean;
+  /** Applied to the outer wrapper, for layout. */
+  class?: string;
+}
+
+const {
+  href,
+  variant = 'neutral',
+  size = 'pill',
+  pressed = false,
+  class: className,
+  type,
+  ...rest
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+---
+
+<span class:list={['iso-hole', className]}>
+  <Tag
+    class:list={['iso-btn', `iso-btn--${size}`, `iso-btn--${variant}`, { 'is-pressed': pressed }]}
+    href={href}
+    type={href ? undefined : (type ?? 'button')}
+    aria-current={href && pressed ? 'page' : undefined}
+    aria-pressed={!href && pressed ? 'true' : undefined}
+    {...rest}
+  >
+    <slot />
+  </Tag>
+</span>
+
+<style>
+  /* Registered so it can transition; the face offset and the side-face
+     length are both derived from it, which keeps the base fixed on every
+     frame, including spring overshoot. */
+  @property --press {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+  }
+
+  /* The base sits at (0, --r) inside the hole for every tilt angle
+     (--theta, written by iso-tilt.ts) and every --press value
+     (0 = resting, 1 = seated). */
+  .iso-hole {
+    --r: var(--iso-depth);
+    --tilt-range: var(--iso-tilt-range);
+    --theta: 0rad;
+    display: inline-block;
+    vertical-align: middle;
+    padding: 0 calc(var(--r) * 0.75) var(--r) calc(var(--r) * 0.75);
+  }
+
+  .iso-btn {
+    --press: 0;
+    /* the part of the depth still visible below the face */
+    --dx: calc(var(--r) * sin(var(--theta)) * (1 - var(--press)));
+    --dy: calc(var(--r) * cos(var(--theta)) * (1 - var(--press)));
+
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transform: translate(calc(-1 * var(--dx)), calc(var(--r) - var(--dy)));
+    box-shadow:
+      calc(var(--dx) * 0.125) calc(var(--dy) * 0.125) 0 0 var(--btn-edge),
+      calc(var(--dx) * 0.25) calc(var(--dy) * 0.25) 0 0 var(--btn-edge),
+      calc(var(--dx) * 0.375) calc(var(--dy) * 0.375) 0 0 var(--btn-edge),
+      calc(var(--dx) * 0.5) calc(var(--dy) * 0.5) 0 0 var(--btn-edge),
+      calc(var(--dx) * 0.625) calc(var(--dy) * 0.625) 0 0 var(--btn-edge),
+      calc(var(--dx) * 0.75) calc(var(--dy) * 0.75) 0 0 var(--btn-edge),
+      calc(var(--dx) * 0.875) calc(var(--dy) * 0.875) 0 0 var(--btn-edge),
+      var(--dx) var(--dy) 0 0 var(--btn-edge);
+    transition: --press var(--dur-release) var(--ease-spring);
+  }
+
+  @media (hover: hover) {
+    .iso-hole:hover .iso-btn:not(:active):not(.is-pressed) {
+      --press: 0.35;
+      background: var(--btn-bg-hover);
+    }
+  }
+
+  .iso-btn:active,
+  .iso-btn.is-pressed {
+    --press: 1;
+    transition: --press var(--dur-press) var(--ease-press);
+  }
+
+  .iso-btn:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+    border-radius: var(--radius-md);
+  }
+
+  /* ---- sizes ---- */
+  .iso-btn--pill {
+    padding: 0.85rem 1.5rem;
+  }
+
+  .iso-btn--square {
+    flex-direction: column;
+    gap: 0.3rem;
+    width: var(--iso-square-size, 88px);
+    height: var(--iso-square-size, 88px);
+    padding: 0;
+    font-size: var(--text-xs);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+
+  .iso-btn--icon {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+  }
+
+  .iso-btn :global(svg) {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .iso-btn--square :global(svg) {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* ---- variants ---- */
+  .iso-btn--neutral {
+    --btn-bg: var(--neutral);
+    --btn-bg-hover: var(--neutral-hover);
+    --btn-edge: var(--neutral-edge);
+    --btn-text: var(--neutral-ink);
+  }
+  .iso-btn--orange {
+    --btn-bg: var(--orange);
+    --btn-bg-hover: var(--orange-hover);
+    --btn-edge: var(--orange-edge);
+    --btn-text: var(--on-accent);
+  }
+  .iso-btn--red {
+    --btn-bg: var(--red);
+    --btn-bg-hover: var(--red-hover);
+    --btn-edge: var(--red-edge);
+    --btn-text: var(--on-accent);
+  }
+  .iso-btn--blue {
+    --btn-bg: var(--blue);
+    --btn-bg-hover: var(--blue-hover);
+    --btn-edge: var(--blue-edge);
+    --btn-text: var(--on-accent);
+  }
+  .iso-btn--green {
+    --btn-bg: var(--green);
+    --btn-bg-hover: var(--green-hover);
+    --btn-edge: var(--green-edge);
+    --btn-text: var(--on-accent);
+  }
+</style>
+
+<script>
+  import '../scripts/iso-tilt';
+</script>

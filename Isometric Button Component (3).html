@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Isometric Button Component</title>
+<style>
+  :root {
+    --page-bg: #eef0f2; --panel-bg: #ffffff; --ink: #1c1e21; --muted: #6b7076;
+    --btn-bg: #d6d6d6; --btn-bg-hover: #dadada; --btn-edge: #a3a3a3; --btn-text: #333;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #16171a; --panel-bg: #201f24; --ink: #eee; --muted: #97999e;
+      --btn-bg: #3a3b3f; --btn-bg-hover: #414247; --btn-edge: #1e1f22; --btn-text: #eee;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #16171a; --panel-bg: #201f24; --ink: #eee; --muted: #97999e;
+    --btn-bg: #3a3b3f; --btn-bg-hover: #414247; --btn-edge: #1e1f22; --btn-text: #eee;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex; justify-content: center; padding: 2.5rem 1.25rem 3rem;
+  }
+  main { width: 100%; max-width: 720px; }
+  h1 { font-size: 1.3rem; margin: 0 0 .25rem; }
+  p.lede { color: var(--muted); margin: 0 0 2rem; font-size: .95rem; line-height: 1.5; }
+  .hint { font-size: .8rem; color: var(--muted); margin-top: 1rem; }
+
+  /* ---- the reusable component ---- */
+  /* .iso-hole  : sizing/padding only, based on --r.
+     .iso-tilt  : the theta-dependent rest position. JS writes its
+                  transform directly every frame; it has NO transition,
+                  so it tracks the cursor with zero added latency.
+     .iso-btn   : press/release only — the delta from "resting" to
+                  "seated at the fixed back point." This is the only
+                  layer that transitions, and it barely depends on tilt
+                  in practice, since the cursor is near-centered on the
+                  button by the time you're hovering it.               */
+  .iso-hole {
+    --r: 9px;
+    --radius: 16px;
+    --tilt-range: 260px;
+    display: inline-block;
+    position: relative;
+    padding: 0 calc(var(--r) * .75) var(--r) calc(var(--r) * .75);
+  }
+  .iso-tilt { display: inline-block; will-change: transform; }
+  .iso-btn {
+    appearance: none;
+    display: block;
+    border: none;
+    text-decoration: none;
+    border-radius: var(--radius);
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font: inherit;
+    font-weight: 600;
+    font-size: .95rem;
+    padding: .85rem 1.5rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-rest, 0 var(--r) 0 0 var(--btn-edge)); /* no transition: instant */
+    transform: translate(0, 0) scale(1);
+    transition: transform 220ms cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .iso-hole:hover .iso-btn:not(:active):not(.is-pressed) {
+    background: var(--btn-bg-hover);
+    transform: translate(calc(var(--dx, 0px) * .35), calc(var(--dy, var(--r)) * .35)) scale(1);
+    box-shadow: var(--shadow-hover, none);
+  }
+  .iso-btn:active,
+  .iso-btn.is-pressed {
+    transform: translate(var(--dx, 0px), var(--dy, var(--r))) scale(.98);
+    box-shadow: none;
+    transition: transform 70ms cubic-bezier(.3, 0, .2, 1);
+  }
+  /* Once seated, --dx/--dy must track .iso-tilt in the same frame so the
+     two offsets cancel exactly; any transition here makes it wobble. */
+  .iso-btn.is-seated:active,
+  .iso-btn.is-seated.is-pressed {
+    transition: none;
+  }
+  .iso-btn:focus-visible { outline: 2px solid #6d8bff; outline-offset: 3px; }
+
+  .iso-btn.square {
+    width: 88px; height: 88px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .3rem; padding: 0; font-size: .72rem; letter-spacing: .01em;
+  }
+  .iso-btn.square svg { width: 24px; height: 24px; flex-shrink: 0; }
+
+  /* ---- demo page chrome ---- */
+  .site-header {
+    background: var(--panel-bg); border-radius: 18px; padding: 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  }
+  .brand { font-weight: 700; font-size: 1.05rem; margin-right: auto; }
+  .nav-group { display: flex; gap: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Isometric button component</h1>
+  <p class="lede">Tilt tracks the cursor with no added lag. Click for a quick snap down, release for a springy pop back up.</p>
+
+  <header class="site-header">
+    <div class="brand">Jace</div>
+    <nav class="nav-group" id="siteNav">
+      <span class="iso-hole"><span class="iso-tilt">
+        <button class="iso-btn square is-pressed" data-page="home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+          HOME
+        </button>
+      </span></span>
+      <span class="iso-hole"><span class="iso-tilt">
+        <button class="iso-btn square" data-page="projects">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          PROJECTS
+        </button>
+      </span></span>
+      <span class="iso-hole"><span class="iso-tilt">
+        <button class="iso-btn square" data-page="about">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          ABOUT ME
+        </button>
+      </span></span>
+    </nav>
+    <span class="iso-hole"><span class="iso-tilt">
+      <a href="#" download class="iso-btn square">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        RESUME
+      </a>
+    </span></span>
+  </header>
+  <p class="hint">Home starts as the active page (.is-pressed); Resume is a plain download action, not part of the nav group.</p>
+</main>
+
+<script>
+  const MAX_ANGLE = Math.PI / 4; // 45°
+
+  function paintIsoShadow(btn, dx, dy, edge, steps = 8) {
+    const layersFor = (moved) => {
+      const remX = dx * (1 - moved), remY = dy * (1 - moved);
+      const layers = [];
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        layers.push(`${(remX * t).toFixed(2)}px ${(remY * t).toFixed(2)}px 0 0 ${edge}`);
+      }
+      return layers.join(',');
+    };
+    btn.style.setProperty('--shadow-rest', layersFor(0));
+    btn.style.setProperty('--shadow-hover', layersFor(.35));
+  }
+
+  function updateTilt(entry, mouseX) {
+    const { hole, tilt, btn, edge } = entry;
+    const cs = getComputedStyle(hole);
+    const r = parseFloat(cs.getPropertyValue('--r')) || 9;
+    const L = parseFloat(cs.getPropertyValue('--tilt-range')) || 260;
+    const rect = tilt.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const theta = MAX_ANGLE * Math.tanh((mouseX - centerX) / L);
+    const dx = r * Math.sin(theta), dy = r * Math.cos(theta);
+
+    // instant: no transition on .iso-tilt, so this tracks the cursor with zero delay
+    tilt.style.transform = `translate(${(-dx).toFixed(2)}px, ${(r - dy).toFixed(2)}px)`;
+    // referenced by .iso-btn's (transitioned) hover/press rules
+    btn.style.setProperty('--dx', dx.toFixed(2) + 'px');
+    btn.style.setProperty('--dy', dy.toFixed(2) + 'px');
+    paintIsoShadow(btn, dx, dy, edge);
+  }
+
+  const entries = Array.from(document.querySelectorAll('.iso-hole')).map(hole => {
+    const tilt = hole.querySelector('.iso-tilt');
+    const btn = hole.querySelector('.iso-btn');
+    const edge = getComputedStyle(btn).getPropertyValue('--btn-edge').trim();
+    return { hole, tilt, btn, edge };
+  });
+  entries.forEach(e => updateTilt(e, window.innerWidth / 2)); // straight-up default
+
+  const isPressed = (btn) => btn.matches(':active, .is-pressed');
+  entries.forEach(({ btn }) => {
+    if (btn.classList.contains('is-pressed')) btn.classList.add('is-seated');
+    btn.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'transform' && isPressed(btn)) btn.classList.add('is-seated');
+    });
+    // a new press must animate down again, so drop any stale seat first
+    btn.addEventListener('pointerdown', () => {
+      if (!btn.classList.contains('is-pressed')) btn.classList.remove('is-seated');
+    });
+    btn.addEventListener('keydown', () => { if (!isPressed(btn)) btn.classList.remove('is-seated'); });
+  });
+
+  let lastX = window.innerWidth / 2, ticking = false;
+  window.addEventListener('mousemove', (e) => {
+    lastX = e.clientX;
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(() => {
+        entries.forEach(entry => updateTilt(entry, lastX));
+        ticking = false;
+      });
+    }
+  });
+
+  document.getElementById('siteNav').addEventListener('click', (e) => {
+    const btn = e.target.closest('.iso-btn');
+    if (!btn) return;
+    document.querySelectorAll('#siteNav .iso-btn').forEach(b => {
+      if (b !== btn) b.classList.remove('is-pressed', 'is-seated');
+    });
+    btn.classList.add('is-pressed');
+  });
+</script>
+</body>
+</html>

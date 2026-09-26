@@ -1,0 +1,59 @@
+---
+import IsoButton from './IsoButton.astro';
+import Icon from './Icon.astro';
+---
+
+<IsoButton size="icon" class="theme-toggle" data-theme-toggle aria-label="Switch theme">
+  <Icon name="moon" class="icon-moon" />
+  <Icon name="sun" class="icon-sun" />
+</IsoButton>
+
+<style>
+  /* shows the theme you would switch to */
+  :global(:root[data-theme="dark"] .theme-toggle .icon-moon),
+  :global(:root:not([data-theme="dark"]) .theme-toggle .icon-sun) {
+    display: none;
+  }
+</style>
+
+<script>
+  const root = document.documentElement;
+  const media = matchMedia('(prefers-color-scheme: dark)');
+  const toggles = document.querySelectorAll<HTMLElement>('[data-theme-toggle]');
+
+  const readStored = () => {
+    try {
+      return localStorage.getItem('theme');
+    } catch {
+      return null;
+    }
+  };
+
+  function apply(theme: 'light' | 'dark') {
+    root.dataset.theme = theme;
+    const next = theme === 'dark' ? 'light' : 'dark';
+    toggles.forEach((t) => t.setAttribute('aria-label', `Switch to ${next} theme`));
+  }
+
+  apply(root.dataset.theme === 'dark' ? 'dark' : 'light');
+
+  toggles.forEach((t) =>
+    t.addEventListener('click', () => {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      apply(next);
+      try {
+        localStorage.setItem('theme', next);
+      } catch {}
+    }),
+  );
+
+  media.addEventListener('change', (e) => {
+    if (!readStored()) apply(e.matches ? 'dark' : 'light');
+  });
+
+  // ClientRouter replaces <html> attributes with the incoming page's, which
+  // carries no data-theme; hand the current one over before the swap.
+  document.addEventListener('astro:before-swap', (e) => {
+    e.newDocument.documentElement.dataset.theme = root.dataset.theme;
+  });
+</script>

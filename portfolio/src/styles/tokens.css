@@ -1,0 +1,144 @@
+/* Design tokens. Light (warm) is the default; dark overrides only the
+   theme-dependent scalars and neutrals, so every derived color follows.
+
+   Accents are one tetradic rectangle in OKLCH: orange/blue and red/green
+   are the two complementary pairs. All four share one lightness and chroma
+   per theme so they read as equally muted. Contrast (WCAG AA, 4.5:1) was
+   checked for --on-accent over each accent and for each --*-ink over
+   --bg and --surface; re-check if you change the L or C values. */
+
+:root {
+  color-scheme: light;
+
+  --hue-red: 25;
+  --hue-orange: 55;
+  --hue-green: 145;
+  --hue-blue: 250;
+
+  --accent-l: 0.55;
+  --accent-hover-l: 0.58;
+  --accent-ink-l: 0.48;
+  --accent-c: 0.1;
+  --on-accent: #ffffff;
+
+  --bg: #f6f1ea;
+  --surface: #fffaf3;
+  --surface-sunken: #efe7dc;
+  --line: #e4d9cb;
+  --ink: #2a2420;
+  --muted: #6f655c;
+
+  --neutral: #e6ddd0;
+  --neutral-hover: #ebe3d8;
+  --neutral-ink: #3a322c;
+
+  --card-shadow: 0 1px 0 rgb(60 40 20 / 0.04), 0 12px 32px -16px rgb(60 40 20 / 0.18);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --accent-l: 0.72;
+  --accent-hover-l: 0.75;
+  --accent-ink-l: 0.78;
+  --accent-c: 0.09;
+  --on-accent: #1a1816;
+
+  --bg: #1a1816;
+  --surface: #24211e;
+  --surface-sunken: #141210;
+  --line: #34302b;
+  --ink: #efe9e2;
+  --muted: #a39a90;
+
+  --neutral: #46413c;
+  --neutral-hover: #4e4944;
+  --neutral-ink: #efe9e2;
+  /* a lighter mix than the accents so the edge still separates from --surface */
+  --neutral-edge: color-mix(in oklch, var(--neutral) 80%, black);
+
+  --card-shadow: 0 1px 0 rgb(0 0 0 / 0.2), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+}
+
+:root {
+  /* ---- accents (derived; do not override per theme) ---- */
+  --orange: oklch(var(--accent-l) var(--accent-c) var(--hue-orange));
+  --red: oklch(var(--accent-l) var(--accent-c) var(--hue-red));
+  --blue: oklch(var(--accent-l) var(--accent-c) var(--hue-blue));
+  --green: oklch(var(--accent-l) var(--accent-c) var(--hue-green));
+
+  --orange-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-orange));
+  --red-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-red));
+  --blue-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-blue));
+  --green-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-green));
+
+  /* the isometric side face */
+  --orange-edge: color-mix(in oklch, var(--orange) 70%, black);
+  --red-edge: color-mix(in oklch, var(--red) 70%, black);
+  --blue-edge: color-mix(in oklch, var(--blue) 70%, black);
+  --green-edge: color-mix(in oklch, var(--green) 70%, black);
+  --neutral-edge: color-mix(in oklch, var(--neutral) 70%, black);
+
+  /* soft accent backgrounds (tags, thumbnails); --*-ink text passes AA on these */
+  --orange-tint: color-mix(in oklab, var(--orange) 16%, var(--surface));
+  --red-tint: color-mix(in oklab, var(--red) 16%, var(--surface));
+  --blue-tint: color-mix(in oklab, var(--blue) 16%, var(--surface));
+  --green-tint: color-mix(in oklab, var(--green) 16%, var(--surface));
+
+  /* accent used as text (links, labels) on --bg / --surface */
+  --orange-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-orange));
+  --red-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-red));
+  --blue-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-blue));
+  --green-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-green));
+
+  /* provisional roles; see "Accent roles" decision */
+  --primary: var(--orange);
+  --link: var(--blue-ink);
+  --focus-ring: var(--blue);
+
+  /* ---- shape: about 2x the usual radius scale ---- */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* ---- isometric depth ---- */
+  --iso-depth: 9px;
+  --iso-tilt-range: 260px;
+
+  /* ---- spacing ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* ---- type (typeface is still an open decision; system stack for now) ---- */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-sans);
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: clamp(2.5rem, 2rem + 2.5vw, 3.5rem);
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.6;
+
+  /* ---- motion ---- */
+  --ease-press: cubic-bezier(0.3, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-press: 70ms;
+  --dur-release: 220ms;
+
+  --content-width: 1080px;
+}

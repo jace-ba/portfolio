@@ -1,0 +1,85 @@
+---
+import '../styles/tokens.css';
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import SiteHeader from '../components/SiteHeader.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'Portfolio of Jace: projects, experiments, and a bit about me.',
+} = Astro.props;
+const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{fullTitle}</title>
+    <!-- Runs before first paint so the page never flashes the wrong theme. -->
+    <script is:inline>
+      (() => {
+        let stored = null;
+        try { stored = localStorage.getItem('theme'); } catch {}
+        const system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme =
+          stored === 'light' || stored === 'dark' ? stored : system;
+      })();
+    </script>
+    <ClientRouter />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <SiteHeader />
+    <main id="main" class="container">
+      <slot />
+    </main>
+    <footer class="container">
+      <div class="site-footer">
+        <p>© {new Date().getFullYear()} Jace</p>
+        <a href="mailto:hello@example.com">hello@example.com</a>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  main {
+    padding-block: var(--space-8);
+  }
+
+  .site-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding-block: var(--space-6) var(--space-7);
+    border-top: 1px solid var(--line);
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -100px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--ink);
+    z-index: 10;
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+</style>

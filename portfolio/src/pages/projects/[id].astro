@@ -1,0 +1,95 @@
+---
+import { render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IsoButton from '../../components/IsoButton.astro';
+import IsoTile from '../../components/IsoTile.astro';
+import Icon from '../../components/Icon.astro';
+import Tag from '../../components/Tag.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { getProjects } from '../../lib/projects';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project, i) => ({
+    params: { id: project.id },
+    props: { project, next: projects[(i + 1) % projects.length] },
+  }));
+}
+
+const { project, next } = Astro.props;
+const { title, summary, category, stack, accent, year } = project.data;
+const { Content } = await render(project);
+---
+
+<BaseLayout title={title} description={summary}>
+  <article class="page">
+    <div>
+      <IsoButton href="/projects">
+        <Icon name="arrowLeft" />
+        All projects
+      </IsoButton>
+    </div>
+
+    <header class="intro">
+      <p class="eyebrow">{category} · {year}</p>
+      <h1>{title}</h1>
+      <p class="lede">{summary}</p>
+      <div class="tags">
+        <Tag accent={accent}>{category}</Tag>
+        <Tag>{stack}</Tag>
+      </div>
+    </header>
+
+    <IsoTile accent={accent} size="hero" />
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {
+      next.id !== project.id && (
+        <section class="section next" aria-labelledby="next">
+          <h2 id="next">Next project</h2>
+          <div class="card-grid">
+            <ProjectCard project={next} />
+          </div>
+        </section>
+      )
+    }
+  </article>
+</BaseLayout>
+
+<style>
+  .tags {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .prose {
+    max-width: 68ch;
+    display: grid;
+    gap: var(--space-4);
+  }
+  .prose :global(h2) {
+    margin-top: var(--space-5);
+  }
+  .prose :global(ul) {
+    margin: 0;
+    padding-left: 1.25em;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .prose :global(blockquote) {
+    margin: 0;
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    color: var(--muted);
+  }
+  .prose :global(code) {
+    padding: 0.1em 0.35em;
+    border-radius: 6px;
+    background: var(--surface-sunken);
+    font-size: 0.9em;
+  }
+</style>

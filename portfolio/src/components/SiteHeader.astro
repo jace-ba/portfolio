@@ -1,0 +1,64 @@
+---
+import IsoButton from './IsoButton.astro';
+import Icon from './Icon.astro';
+import SiteNav from './SiteNav.astro';
+import ThemeToggle from './ThemeToggle.astro';
+---
+
+<div class="container header-wrap" transition:persist="site-header" transition:animate="none">
+  <header class="site-header">
+    <a class="brand" href="/">Jace</a>
+    <SiteNav />
+    <div class="actions">
+      <IsoButton href="/resume.pdf" download size="square">
+        <Icon name="download" />
+        Resume
+      </IsoButton>
+      <ThemeToggle />
+    </div>
+  </header>
+</div>
+
+<style>
+  .header-wrap {
+    padding-top: var(--space-5);
+  }
+
+  .site-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    padding: var(--space-5);
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+  }
+
+  .brand {
+    margin-right: auto;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  @media (max-width: 720px) {
+    .site-header {
+      --iso-square-size: 72px;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+    }
+    .brand {
+      flex-basis: 100%;
+    }
+  }
+</style>

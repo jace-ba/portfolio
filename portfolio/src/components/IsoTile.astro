@@ -1,0 +1,55 @@
+---
+/* Placeholder artwork: an isometric tile on an accent tint. Swap for real
+   images once project screenshots exist. */
+interface Props {
+  accent: 'orange' | 'red' | 'blue' | 'green';
+  size?: 'card' | 'hero' | 'portrait';
+  class?: string;
+}
+
+const { accent, size = 'card', class: className } = Astro.props;
+---
+
+<div
+  class:list={['thumb', `thumb--${size}`, className]}
+  style={`--thumb-bg: var(--${accent}-tint); --tile: var(--${accent}); --tile-edge: var(--${accent}-edge);`}
+  aria-hidden="true"
+>
+  <div class="tile"></div>
+</div>
+
+<style>
+  .thumb {
+    display: grid;
+    place-items: center;
+    background: var(--thumb-bg);
+    border-radius: var(--radius-md);
+  }
+  .thumb--card { height: 188px; }
+  .thumb--hero { height: clamp(220px, 32vw, 360px); border-radius: var(--radius-xl); }
+  .thumb--portrait { aspect-ratio: 6 / 7; border-radius: var(--radius-xl); }
+
+  .tile {
+    --depth: var(--iso-depth);
+    width: 104px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    background: var(--tile);
+    box-shadow: 0 var(--depth) 0 0 var(--tile-edge);
+    transition: transform var(--dur-release) var(--ease-spring), box-shadow var(--dur-release) var(--ease-spring);
+  }
+  .thumb--hero .tile,
+  .thumb--portrait .tile {
+    --depth: 12px;
+    width: 150px;
+    height: 96px;
+    border-radius: var(--radius-lg);
+  }
+
+  /* the tile half-presses when its card is hovered, echoing the buttons */
+  :global(a:hover) > .thumb .tile,
+  :global(a:focus-visible) > .thumb .tile {
+    transform: translateY(calc(var(--depth) * 0.35));
+    box-shadow: 0 calc(var(--depth) * 0.65) 0 0 var(--tile-edge);
+  }
+</style>
