@@ -146,25 +146,32 @@ html.flooding #flood {
   display: block;
 }
 
-/* Each element takes its color from its own tokens, so it can change when
-   the paint reaches it instead of inheriting a color that already flipped. */
-html.flooding :where(body *) {
-  color: var(--ink);
-  transition:
-    color var(--dur-flood-fade) ease,
-    background-color var(--dur-flood-fade) ease,
-    border-color var(--dur-flood-fade) ease;
+/* An inherited color is resolved in the parent's theme, so it would flip when
+   the paint reaches the parent. The splash records every element's color in
+   both themes (theme-flood.ts), and each element shows the one for its own
+   tone. Layered, so any color or transition a component declares still wins. */
+@property --flood-fg-light {
+  syntax: '*';
+  inherits: false;
+}
+@property --flood-fg-dark {
+  syntax: '*';
+  inherits: false;
 }
 
-/* Icon shapes inherit stroke from currentColor. Left on their own, the rule
-   above sets their color to --ink, so they fade to the page text color
-   (near-white in dark mode) for the whole splash. */
-html.flooding :where(svg, svg *) {
-  color: inherit;
-}
-
-html.flooding :where(.site-footer p) {
-  color: var(--muted);
+@layer flood {
+  html.flooding :where(body [data-tone="light"]) {
+    color: var(--flood-fg-light);
+  }
+  html.flooding :where(body [data-tone="dark"]) {
+    color: var(--flood-fg-dark);
+  }
+  html.flooding :where(body *) {
+    transition:
+      color var(--dur-flood-fade) ease,
+      background-color var(--dur-flood-fade) ease,
+      border-color var(--dur-flood-fade) ease;
+  }
 }
 
 /* A sliced element keeps its own layer in the old colors. Each splash appends
@@ -179,11 +186,6 @@ html.flooding :where(.site-footer p) {
   inset: 0;
   margin: 0;
   pointer-events: none;
-}
-/* The new bar fill overscans the shell. The old fill is clipped out of the
-   splash in script, so a covered corner has nothing underneath to fringe. */
-html.flooding .bar[data-flood-host] > .bar-fill[data-flood-clone] {
-  inset: -12px;
 }
 [data-flood-clone],
 [data-flood-clone] * {

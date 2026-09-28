@@ -38,6 +38,7 @@ const ctx = canvas?.getContext('2d') ?? null;
 
 let floods: Flood[] = [];
 let els: Element[] = [];
+let recorded: Element[] = [];
 let floorTone: Tone | null = null;
 let raf = 0;
 let cleanupTimer = 0;
@@ -115,41 +116,10 @@ function clipFor(pts: number[], ox: number, oy: number) {
   return `${out})`;
 }
 
-function barBase() {
-  return document.querySelector<HTMLElement>('.bar > [data-flood-base]');
-}
-
-/** Punch the active splashes out of the old bar fill so it never sits under a covered corner. */
-function applyBarHole(blobs: number[][]) {
-  const base = barBase();
-  if (!base) return;
-  if (!blobs.length) {
-    base.style.removeProperty('clip-path');
-    return;
-  }
-  const rect = base.getBoundingClientRect();
-  if (rect.width < 1) return;
-  const w = rect.width.toFixed(1);
-  const h = rect.height.toFixed(1);
-  let d = `M0,0 H${w} V${h} H0 Z`;
-  for (const pts of blobs) {
-    d += ` M${(pts[0] - rect.left).toFixed(1)},${(pts[1] - rect.top).toFixed(1)}`;
-    for (let i = 1; i < COUNT; i++) {
-      d += ` L${(pts[i * 2] - rect.left).toFixed(1)},${(pts[i * 2 + 1] - rect.top).toFixed(1)}`;
-    }
-    d += ' Z';
-  }
-  base.style.clipPath = `path(evenodd, "${d}")`;
-}
-
 function hosts() {
   return [...document.querySelectorAll<HTMLElement>('[data-flood-host]')].filter(
     (host) => !host.closest('[data-flood-clone]'),
   );
-}
-
-function baseOf(host: HTMLElement) {
-  return host.querySelector<HTMLElement>(':scope > [data-flood-base]') ?? host;
 }
 
 function markTitles() {
@@ -165,10 +135,9 @@ function buildLayers(tone: Tone) {
   const layers: HTMLElement[] = [];
   for (const host of hosts()) {
     if (host.getBoundingClientRect().width < 1) continue;
-    const clone = baseOf(host).cloneNode(true) as HTMLElement;
+    const clone = host.cloneNode(true) as HTMLElement;
     clone.querySelectorAll('[data-flood-clone]').forEach((node) => node.remove());
     clone.removeAttribute('data-flood-host');
-    clone.removeAttribute('data-flood-base');
     clone.removeAttribute('id');
     clone.querySelectorAll('[data-tone]').forEach((node) => node.removeAttribute('data-tone'));
     clone.dataset.tone = tone;
@@ -183,9 +152,35 @@ function buildLayers(tone: Tone) {
   return { hosts: hostList, layers };
 }
 
+/** Record each element's text color in both themes, so an inherited color can
+    change when the paint reaches that element instead of its parent. */
+function recordColors(current: Tone) {
+  const other: Tone = current === 'dark' ? 'light' : 'dark';
+  recorded = [...els, ...hosts()];
+  const now = recorded.map((el) => getComputedStyle(el).color);
+  // Tones, not the root theme, so nothing keyed to the theme starts moving.
+  const toned = [document.body, ...recorded];
+  for (const el of toned) el.setAttribute('data-tone', other);
+  const flipped = recorded.map((el) => getComputedStyle(el).color);
+  for (const el of toned) el.setAttribute('data-tone', current);
+  document.body.removeAttribute('data-tone');
+  recorded.forEach((el, i) => {
+    const { style } = el as HTMLElement;
+    style.setProperty(`--flood-fg-${current}`, now[i]);
+    style.setProperty(`--flood-fg-${other}`, flipped[i]);
+  });
+}
+
 function clearTones() {
   for (const el of els) el.removeAttribute('data-tone');
+  for (const el of recorded) {
+    const { style } = el as HTMLElement;
+    style.removeProperty('--flood-fg-light');
+    style.removeProperty('--flood-fg-dark');
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  }
   els = [];
+  recorded = [];
 }
 
 function removeClones() {
@@ -200,12 +195,17 @@ export function endFlood() {
   floods = [];
   floorTone = null;
   removeClones();
-  barBase()?.style.removeProperty('clip-path');
   ctx?.clearRect(0, 0, cw, ch);
   root.style.removeProperty('--floor');
   clearTones();
   document.querySelectorAll('[data-tone]').forEach((el) => el.removeAttribute('data-tone'));
+  settle();
+}
+
+/** Leave splash mode. The page's color-scheme only follows the theme once nothing is fading. */
+function settle() {
   root.classList.remove('flooding');
+  root.style.removeProperty('color-scheme');
 }
 
 function finish() {
@@ -213,9 +213,9 @@ function finish() {
   root.style.removeProperty('--floor');
   clearTones();
   // The root theme already matches the settled splash, so the hosts can inherit it.
-  for (const host of hosts()) baseOf(host).removeAttribute('data-tone');
+  for (const host of hosts()) host.removeAttribute('data-tone');
   const fade = ms('--dur-flood-fade', 250);
-  cleanupTimer = window.setTimeout(() => root.classList.remove('flooding'), fade + 150);
+  cleanupTimer = window.setTimeout(settle, fade + 150);
 }
 
 function tick(now: number) {
@@ -223,7 +223,6 @@ function tick(now: number) {
   if (!ctx) return;
   fit();
   ctx.clearRect(0, 0, cw, ch);
-  // The bar fill is larger than its shell, so clip each copy in its own box.
   const rects = new Map<HTMLElement, DOMRect>();
   for (const flood of floods) {
     for (const layer of flood.layers) {
@@ -232,11 +231,9 @@ function tick(now: number) {
       if (rect.width > 0 && rect.bottom > 0 && rect.top < ch) rects.set(layer, rect);
     }
   }
-  const drawn: { flood: Flood; pts: number[] }[] = [];
   for (const flood of floods) {
     const t = Math.min(1, Math.max(0, (now - flood.start) / duration));
     const pts = blobPoints(flood, t);
-    drawn.push({ flood, pts });
     drawFlood(flood.color, pts);
     for (const layer of flood.layers) {
       const rect = rects.get(layer);
@@ -253,11 +250,9 @@ function tick(now: number) {
     if (!done) break;
     floorTone = done.tone;
     root.style.setProperty('--floor', done.color);
-    for (const host of done.hosts) baseOf(host).setAttribute('data-tone', done.tone);
+    for (const host of done.hosts) host.setAttribute('data-tone', done.tone);
     for (const layer of done.layers) layer.remove();
   }
-  const live = new Set(floods);
-  applyBarHole(drawn.filter((item) => live.has(item.flood)).map((item) => item.pts));
   if (floods.length) raf = requestAnimationFrame(tick);
   else finish();
 }
@@ -273,6 +268,8 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const fresh = floods.length === 0;
   if (fresh) {
     clearTimeout(cleanupTimer);
+    // Colors are recorded below with no flood transitions running.
+    settle();
     markTitles();
     els = [...document.body.querySelectorAll('*:not(#flood)')].filter(
       (el) => !el.closest('[data-flood-host]'),
@@ -301,8 +298,12 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   if (fresh) {
     floorTone = root.dataset.theme === 'dark' ? 'dark' : 'light';
     if (oldBg) root.style.setProperty('--floor', oldBg);
+    recordColors(floorTone);
     for (const el of els) el.setAttribute('data-tone', floorTone);
-    for (const host of hosts()) baseOf(host).setAttribute('data-tone', floorTone);
+    for (const host of hosts()) host.setAttribute('data-tone', floorTone);
+    // Changing the root color-scheme mid-fade makes Chromium restart every
+    // inherited color transition on each frame, so text crawls and icons flicker.
+    root.style.setProperty('color-scheme', floorTone);
     root.classList.add('flooding');
   }
   commit(next);
