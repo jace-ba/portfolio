@@ -123,7 +123,11 @@ const Tag = href ? 'a' : 'button';
 
   /* ---- sizes ---- */
   .iso-btn--pill {
-    padding: 0.85rem var(--pill-pad-inline, 1.5rem);
+    --pill-pad-block: 0.85rem;
+    padding: var(--pill-pad-block) var(--pill-pad-inline, 1.5rem);
+    /* The icon is taller than the text line, so text-only pills would
+       otherwise sit shorter than pills that contain an icon. */
+    min-height: calc(var(--iso-icon) + var(--pill-pad-block) * 2);
   }
 
   .iso-btn--square {
@@ -144,8 +148,8 @@ const Tag = href ? 'a' : 'button';
   }
 
   .iso-btn :global(svg) {
-    width: var(--iso-icon, 22px);
-    height: var(--iso-icon, 22px);
+    width: var(--iso-icon);
+    height: var(--iso-icon);
     flex-shrink: 0;
   }
   .iso-btn--square :global(svg) {

@@ -1,7 +1,7 @@
-/* Design tokens. Light (warm) is the default; dark overrides neutrals and
-   accent ink. Accent fills, hovers, edges, and labels are the same in both
-   themes. See docs/design-spec.md. Re-check WCAG AA (4.5:1) if any accent
-   value changes: labels on fills, and each ink on --bg, --surface, and its tint. */
+/* Design tokens. Light (warm) is the default; dark overrides neutrals, the
+   accent adjustment, and accent ink. See docs/design-spec.md. Re-check WCAG AA
+   if any accent value changes: labels on fills (4.5:1), each ink on --bg,
+   --surface, and its tint (4.5:1), and each edge on --bg and --surface (3:1). */
 
 :root {
   color-scheme: light;
@@ -17,30 +17,24 @@
   --neutral-hover: #ebe3d8;
   --neutral-ink: #3a322c;
 
-  /* Analogous complement: scarlet, tangerine, and gold sit together and
-     opposite azure. Fills are the given hex. Edges are darkened and shifted
-     toward the shadow hue so they stay saturated. */
-  --azure: #1b9ff6;
-  --azure-hover: #3aaafd;
-  --azure-edge: #225ba7;
+  /* How accents sit on this theme's background. On a light page saturated
+     fills read heavier and deep shadows read harsh, so fills are lifted and
+     softened, and edges stay closer to their fill. Edges are capped so they
+     still clear 3:1 against the page. */
+  --accent-lift: 0.03;
+  --accent-chroma: 0.85;
+  --hover-lift: 0.03;
+  --hover-chroma: 0.9;
+  --edge-depth: 0.8;
+  --edge-chroma: 0.88;
+  --edge-max-l: 0.63;
+
   --azure-label: #051727;
   --azure-ink: #006eaf;
-
-  --scarlet: #fc4f4f;
-  --scarlet-hover: #fe6964;
-  --scarlet-edge: #a51836;
   --scarlet-label: #250e0d;
   --scarlet-ink: #b83c3b;
-
-  --tangerine: #fc8d31;
-  --tangerine-hover: #fe9e58;
-  --tangerine-edge: #aa4921;
   --tangerine-label: #241104;
   --tangerine-ink: #a85500;
-
-  --gold: #fbc024;
-  --gold-hover: #fece63;
-  --gold-edge: #ab6c1c;
   --gold-label: #1e1400;
   --gold-ink: #8c6800;
 }
@@ -61,6 +55,15 @@
   /* a lighter mix than the accents so the edge still separates from --surface */
   --neutral-edge: color-mix(in oklch, var(--neutral) 80%, black);
 
+  /* the base colors, unadjusted */
+  --accent-lift: 0;
+  --accent-chroma: 1;
+  --hover-lift: 0.035;
+  --hover-chroma: 0.88;
+  --edge-depth: 0.7;
+  --edge-chroma: 0.78;
+  --edge-max-l: 1;
+
   /* scarlet and azure fills miss AA on their dark tints */
   --azure-ink: #2da1f3;
   --scarlet-ink: #fb6b66;
@@ -69,7 +72,91 @@
 }
 
 :root {
-  --neutral-edge: color-mix(in oklch, var(--neutral) 70%, black);
+  --neutral-edge: color-mix(in oklch, var(--neutral) 76%, black);
+
+  /* Analogous complement: scarlet, tangerine, and gold sit together, opposite
+     azure. Base L C H are the given hexes (#1b9ff6, #fc4f4f, #fc8d31, #fbc024),
+     shown unchanged in dark mode. --X-shade is the hue a shadow turns toward. */
+  --azure-l: 0.6793;
+  --azure-c: 0.165;
+  --azure-h: 245.33;
+  --azure-shade: 12;
+  --scarlet-l: 0.6703;
+  --scarlet-c: 0.2096;
+  --scarlet-h: 24.81;
+  --scarlet-shade: -8;
+  --tangerine-l: 0.7499;
+  --tangerine-c: 0.1666;
+  --tangerine-h: 55.11;
+  --tangerine-shade: -14;
+  --gold-l: 0.8388;
+  --gold-c: 0.1647;
+  --gold-h: 84.96;
+  --gold-shade: -18;
+
+  --azure: oklch(
+    calc(var(--azure-l) + var(--accent-lift))
+    calc(var(--azure-c) * var(--accent-chroma))
+    var(--azure-h)
+  );
+  --azure-hover: oklch(
+    calc(var(--azure-l) + var(--accent-lift) + var(--hover-lift))
+    calc(var(--azure-c) * var(--accent-chroma) * var(--hover-chroma))
+    var(--azure-h)
+  );
+  --azure-edge: oklch(
+    min(calc((var(--azure-l) + var(--accent-lift)) * var(--edge-depth)), var(--edge-max-l))
+    calc(var(--azure-c) * var(--accent-chroma) * var(--edge-chroma))
+    calc(var(--azure-h) + var(--azure-shade))
+  );
+
+  --scarlet: oklch(
+    calc(var(--scarlet-l) + var(--accent-lift))
+    calc(var(--scarlet-c) * var(--accent-chroma))
+    var(--scarlet-h)
+  );
+  --scarlet-hover: oklch(
+    calc(var(--scarlet-l) + var(--accent-lift) + var(--hover-lift))
+    calc(var(--scarlet-c) * var(--accent-chroma) * var(--hover-chroma))
+    var(--scarlet-h)
+  );
+  --scarlet-edge: oklch(
+    min(calc((var(--scarlet-l) + var(--accent-lift)) * var(--edge-depth)), var(--edge-max-l))
+    calc(var(--scarlet-c) * var(--accent-chroma) * var(--edge-chroma))
+    calc(var(--scarlet-h) + var(--scarlet-shade))
+  );
+
+  --tangerine: oklch(
+    calc(var(--tangerine-l) + var(--accent-lift))
+    calc(var(--tangerine-c) * var(--accent-chroma))
+    var(--tangerine-h)
+  );
+  --tangerine-hover: oklch(
+    calc(var(--tangerine-l) + var(--accent-lift) + var(--hover-lift))
+    calc(var(--tangerine-c) * var(--accent-chroma) * var(--hover-chroma))
+    var(--tangerine-h)
+  );
+  --tangerine-edge: oklch(
+    min(calc((var(--tangerine-l) + var(--accent-lift)) * var(--edge-depth)), var(--edge-max-l))
+    calc(var(--tangerine-c) * var(--accent-chroma) * var(--edge-chroma))
+    calc(var(--tangerine-h) + var(--tangerine-shade))
+  );
+
+  --gold: oklch(
+    calc(var(--gold-l) + var(--accent-lift))
+    calc(var(--gold-c) * var(--accent-chroma))
+    var(--gold-h)
+  );
+  --gold-hover: oklch(
+    calc(var(--gold-l) + var(--accent-lift) + var(--hover-lift))
+    calc(var(--gold-c) * var(--accent-chroma) * var(--hover-chroma))
+    var(--gold-h)
+  );
+  --gold-edge: oklch(
+    min(calc((var(--gold-l) + var(--accent-lift)) * var(--edge-depth)), var(--edge-max-l))
+    calc(var(--gold-c) * var(--accent-chroma) * var(--edge-chroma))
+    calc(var(--gold-h) + var(--gold-shade))
+  );
 
   --azure-tint: color-mix(in oklab, var(--azure) 16%, var(--surface));
   --scarlet-tint: color-mix(in oklab, var(--scarlet) 16%, var(--surface));
@@ -90,6 +177,7 @@
   /* ---- isometric depth ---- */
   --iso-depth: 9px;
   --iso-tilt-range: 260px;
+  --iso-icon: 22px;
 
   /* ---- spacing ---- */
   --space-1: 0.25rem;
