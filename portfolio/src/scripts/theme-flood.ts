@@ -1,6 +1,10 @@
 // The new theme pours out of the toggle as a wobbly splash. Each element
-// keeps the old colors, via data-tone, until the paint reaches it. A second
-// press before the splash settles pours the other color over the first.
+// keeps the old colors, via data-tone, until the paint reaches it. The nav
+// bar, the logo, and page titles are drawn again inside themselves: the copy
+// is clipped to the same polygon the background canvas fills, so the edge
+// cannot drift, and only that clip changes each frame. Buttons stay whole and
+// keep tilting. A second press before the splash settles pours the other
+// color over the first.
 
 type Tone = 'light' | 'dark';
 
@@ -15,6 +19,8 @@ type Flood = {
   start: number;
   shape: Wave[];
   arr: number[];
+  hosts: HTMLElement[];
+  layers: HTMLElement[];
 };
 
 const WAVES: [number, number][] = [
@@ -24,6 +30,7 @@ const WAVES: [number, number][] = [
   [6, 0.05],
 ];
 const SMOOTHING = 0.75;
+const COUNT = 160;
 
 const root = document.documentElement;
 const canvas = document.getElementById('flood') as HTMLCanvasElement | null;
@@ -36,6 +43,7 @@ let raf = 0;
 let cleanupTimer = 0;
 let cw = 0;
 let ch = 0;
+let duration = 1200;
 
 const ampSum = WAVES.reduce((sum, wave) => sum + wave[1], 0);
 const cover = 1.02 / Math.max(0.3, 1 - ampSum * (1 - SMOOTHING));
@@ -55,10 +63,9 @@ function fit() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   const width = Math.round(innerWidth * dpr);
   const height = Math.round(innerHeight * dpr);
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-  }
+  if (canvas.width === width && canvas.height === height) return;
+  canvas.width = width;
+  canvas.height = height;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   cw = innerWidth;
   ch = innerHeight;
@@ -73,38 +80,89 @@ function makeShape(): Wave[] {
   }));
 }
 
-function drawFlood(flood: Flood, t: number) {
-  if (!ctx) return;
+function blobPoints(flood: Flood, t: number) {
   const radius = ease(t) * flood.Rmax;
   const rough = 1 - t * SMOOTHING;
-  const count = 48;
-  const pts: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const theta = (i / count) * Math.PI * 2;
+  const pts = new Array<number>(COUNT * 2);
+  for (let i = 0; i < COUNT; i++) {
+    const theta = (i / COUNT) * Math.PI * 2;
     let n = 0;
     for (const wave of flood.shape) n += wave.a * Math.sin(wave.f * theta + wave.p + wave.s * t);
     const rr = radius * (1 + n * rough);
-    pts.push(flood.cx + rr * Math.cos(theta), flood.cy + rr * Math.sin(theta));
+    pts[i * 2] = flood.cx + rr * Math.cos(theta);
+    pts[i * 2 + 1] = flood.cy + rr * Math.sin(theta);
   }
-  ctx.fillStyle = flood.color;
+  return pts;
+}
+
+function drawFlood(color: string, pts: number[]) {
+  if (!ctx) return;
+  ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.moveTo((pts[0] + pts[2 * (count - 1)]) / 2, (pts[1] + pts[2 * (count - 1) + 1]) / 2);
-  for (let i = 0; i < count; i++) {
-    const next = (i + 1) % count;
-    ctx.quadraticCurveTo(
-      pts[2 * i],
-      pts[2 * i + 1],
-      (pts[2 * i] + pts[2 * next]) / 2,
-      (pts[2 * i + 1] + pts[2 * next + 1]) / 2,
-    );
-  }
+  ctx.moveTo(pts[0], pts[1]);
+  for (let i = 1; i < COUNT; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
   ctx.closePath();
   ctx.fill();
+}
+
+/** The same outline, in the element's own coordinates. */
+function clipFor(pts: number[], ox: number, oy: number) {
+  let out = 'polygon(';
+  for (let i = 0; i < COUNT; i++) {
+    if (i) out += ',';
+    out += `${(pts[i * 2] - ox).toFixed(1)}px ${(pts[i * 2 + 1] - oy).toFixed(1)}px`;
+  }
+  return `${out})`;
+}
+
+function hosts() {
+  return [...document.querySelectorAll<HTMLElement>('[data-flood-host]')].filter(
+    (host) => !host.closest('[data-flood-clone]'),
+  );
+}
+
+function baseOf(host: HTMLElement) {
+  return host.querySelector<HTMLElement>(':scope > [data-flood-base]') ?? host;
+}
+
+function markTitles() {
+  document.querySelectorAll('h1').forEach((heading) => {
+    if (heading instanceof HTMLElement && !heading.closest('[data-flood-host]')) {
+      heading.setAttribute('data-flood-host', '');
+    }
+  });
+}
+
+function buildLayers(tone: Tone) {
+  const hostList: HTMLElement[] = [];
+  const layers: HTMLElement[] = [];
+  for (const host of hosts()) {
+    if (host.getBoundingClientRect().width < 1) continue;
+    const clone = baseOf(host).cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('[data-flood-clone]').forEach((node) => node.remove());
+    clone.removeAttribute('data-flood-host');
+    clone.removeAttribute('data-flood-base');
+    clone.removeAttribute('id');
+    clone.querySelectorAll('[data-tone]').forEach((node) => node.removeAttribute('data-tone'));
+    clone.dataset.tone = tone;
+    clone.dataset.floodClone = '';
+    clone.inert = true;
+    clone.setAttribute('aria-hidden', 'true');
+    clone.style.clipPath = 'polygon(0px 0px, 0px 0px, 0px 0px)';
+    host.append(clone);
+    hostList.push(host);
+    layers.push(clone);
+  }
+  return { hosts: hostList, layers };
 }
 
 function clearTones() {
   for (const el of els) el.removeAttribute('data-tone');
   els = [];
+}
+
+function removeClones() {
+  document.querySelectorAll('[data-flood-clone]').forEach((node) => node.remove());
 }
 
 /** Drop the splash immediately. Used when a page swap would detach the elements it is tracking. */
@@ -114,6 +172,7 @@ export function endFlood() {
   clearTimeout(cleanupTimer);
   floods = [];
   floorTone = null;
+  removeClones();
   ctx?.clearRect(0, 0, cw, ch);
   root.style.removeProperty('--floor');
   clearTones();
@@ -125,6 +184,8 @@ function finish() {
   ctx?.clearRect(0, 0, cw, ch);
   root.style.removeProperty('--floor');
   clearTones();
+  // The root theme already matches the settled splash, so the hosts can inherit it.
+  for (const host of hosts()) baseOf(host).removeAttribute('data-tone');
   const fade = ms('--dur-flood-fade', 250);
   cleanupTimer = window.setTimeout(() => root.classList.remove('flooding'), fade + 150);
 }
@@ -134,20 +195,36 @@ function tick(now: number) {
   if (!ctx) return;
   fit();
   ctx.clearRect(0, 0, cw, ch);
+  // One rect per host, shared by every splash this frame.
+  const rects = new Map<HTMLElement, DOMRect>();
+  const sample = floods[0];
+  if (sample) {
+    for (const host of sample.hosts) {
+      const rect = host.getBoundingClientRect();
+      if (rect.bottom > 0 && rect.top < ch) rects.set(host, rect);
+    }
+  }
   for (const flood of floods) {
-    drawFlood(flood, Math.min(1, Math.max(0, (now - flood.start) / ms('--dur-flood', 1200))));
+    const t = Math.min(1, Math.max(0, (now - flood.start) / duration));
+    const pts = blobPoints(flood, t);
+    drawFlood(flood.color, pts);
+    for (let i = 0; i < flood.layers.length; i++) {
+      const rect = rects.get(flood.hosts[i]);
+      if (rect) flood.layers[i].style.clipPath = clipFor(pts, rect.left, rect.top);
+    }
   }
   for (let i = 0; i < els.length; i++) {
     let tone = floorTone;
     for (const flood of floods) if (now >= flood.arr[i]) tone = flood.tone;
     if (tone && els[i].getAttribute('data-tone') !== tone) els[i].setAttribute('data-tone', tone);
   }
-  const duration = ms('--dur-flood', 1200);
   while (floods.length && now - floods[0].start >= duration) {
     const done = floods.shift();
     if (!done) break;
     floorTone = done.tone;
     root.style.setProperty('--floor', done.color);
+    for (const host of done.hosts) baseOf(host).setAttribute('data-tone', done.tone);
+    for (const layer of done.layers) layer.remove();
   }
   if (floods.length) raf = requestAnimationFrame(tick);
   else finish();
@@ -164,7 +241,11 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const fresh = floods.length === 0;
   if (fresh) {
     clearTimeout(cleanupTimer);
-    els = [...document.body.querySelectorAll('*:not(#flood)')];
+    markTitles();
+    els = [...document.body.querySelectorAll('*:not(#flood)')].filter(
+      (el) => !el.closest('[data-flood-host]'),
+    );
+    duration = ms('--dur-flood', 1200);
   }
 
   const box = origin.getBoundingClientRect();
@@ -172,7 +253,6 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const cy = box.top + box.height / 2;
   const far = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy));
   const Rmax = far * cover;
-  const duration = ms('--dur-flood', 1200);
   const lead = ms('--dur-flood-lead', 120);
   const start = performance.now();
   const arr = els.map((el) => {
@@ -183,14 +263,19 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const oldBg = fresh ? getComputedStyle(document.body).backgroundColor : null;
 
   fit();
+  // A resize may have returned before recording the viewport, so keep cw current.
+  cw = innerWidth;
+  ch = innerHeight;
   if (fresh) {
     floorTone = root.dataset.theme === 'dark' ? 'dark' : 'light';
     if (oldBg) root.style.setProperty('--floor', oldBg);
     for (const el of els) el.setAttribute('data-tone', floorTone);
+    for (const host of hosts()) baseOf(host).setAttribute('data-tone', floorTone);
     root.classList.add('flooding');
   }
   commit(next);
 
+  const built = buildLayers(next);
   floods.push({
     tone: next,
     color: getComputedStyle(root).getPropertyValue('--bg').trim(),
@@ -200,6 +285,8 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     start,
     shape: makeShape(),
     arr,
+    hosts: built.hosts,
+    layers: built.layers,
   });
   if (!raf) raf = requestAnimationFrame(tick);
 }

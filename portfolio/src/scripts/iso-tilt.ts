@@ -20,7 +20,7 @@ function collect() {
   entries = Array.from(document.querySelectorAll<HTMLElement>('.iso-hole'), (hole) => ({
     hole,
     range: parseFloat(getComputedStyle(hole).getPropertyValue('--tilt-range')) || 260,
-  }));
+  })).filter(({ hole }) => !hole.closest('[data-flood-clone]'));
 }
 
 function update() {

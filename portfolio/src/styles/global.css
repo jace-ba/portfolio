@@ -156,12 +156,37 @@ html.flooding :where(body *) {
     border-color var(--dur-flood-fade) ease;
 }
 
-html.flooding :where(svg) {
+/* Icon shapes inherit stroke from currentColor. Left on their own, the rule
+   above sets their color to --ink, so they fade to the page text color
+   (near-white in dark mode) for the whole splash. */
+html.flooding :where(svg, svg *) {
   color: inherit;
 }
 
 html.flooding :where(.site-footer p) {
   color: var(--muted);
+}
+
+/* A sliced element keeps its own layer in the old colors. Each splash appends
+   a copy clipped to the same polygon the canvas fills, so the edge cannot drift
+   and nothing is repositioned per frame. */
+[data-flood-host] {
+  position: relative;
+  isolation: isolate;
+}
+[data-flood-host] > [data-flood-clone] {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+}
+[data-flood-clone],
+[data-flood-clone] * {
+  pointer-events: none;
+}
+html.flooding [data-flood-host],
+html.flooding [data-flood-host] * {
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
