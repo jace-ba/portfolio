@@ -115,6 +115,33 @@ function clipFor(pts: number[], ox: number, oy: number) {
   return `${out})`;
 }
 
+function barBase() {
+  return document.querySelector<HTMLElement>('.bar > [data-flood-base]');
+}
+
+/** Punch the active splashes out of the old bar fill so it never sits under a covered corner. */
+function applyBarHole(blobs: number[][]) {
+  const base = barBase();
+  if (!base) return;
+  if (!blobs.length) {
+    base.style.removeProperty('clip-path');
+    return;
+  }
+  const rect = base.getBoundingClientRect();
+  if (rect.width < 1) return;
+  const w = rect.width.toFixed(1);
+  const h = rect.height.toFixed(1);
+  let d = `M0,0 H${w} V${h} H0 Z`;
+  for (const pts of blobs) {
+    d += ` M${(pts[0] - rect.left).toFixed(1)},${(pts[1] - rect.top).toFixed(1)}`;
+    for (let i = 1; i < COUNT; i++) {
+      d += ` L${(pts[i * 2] - rect.left).toFixed(1)},${(pts[i * 2 + 1] - rect.top).toFixed(1)}`;
+    }
+    d += ' Z';
+  }
+  base.style.clipPath = `path(evenodd, "${d}")`;
+}
+
 function hosts() {
   return [...document.querySelectorAll<HTMLElement>('[data-flood-host]')].filter(
     (host) => !host.closest('[data-flood-clone]'),
@@ -173,6 +200,7 @@ export function endFlood() {
   floods = [];
   floorTone = null;
   removeClones();
+  barBase()?.style.removeProperty('clip-path');
   ctx?.clearRect(0, 0, cw, ch);
   root.style.removeProperty('--floor');
   clearTones();
@@ -195,22 +223,24 @@ function tick(now: number) {
   if (!ctx) return;
   fit();
   ctx.clearRect(0, 0, cw, ch);
-  // One rect per host, shared by every splash this frame.
+  // The bar fill is larger than its shell, so clip each copy in its own box.
   const rects = new Map<HTMLElement, DOMRect>();
-  const sample = floods[0];
-  if (sample) {
-    for (const host of sample.hosts) {
-      const rect = host.getBoundingClientRect();
-      if (rect.bottom > 0 && rect.top < ch) rects.set(host, rect);
+  for (const flood of floods) {
+    for (const layer of flood.layers) {
+      if (rects.has(layer)) continue;
+      const rect = layer.getBoundingClientRect();
+      if (rect.width > 0 && rect.bottom > 0 && rect.top < ch) rects.set(layer, rect);
     }
   }
+  const drawn: { flood: Flood; pts: number[] }[] = [];
   for (const flood of floods) {
     const t = Math.min(1, Math.max(0, (now - flood.start) / duration));
     const pts = blobPoints(flood, t);
+    drawn.push({ flood, pts });
     drawFlood(flood.color, pts);
-    for (let i = 0; i < flood.layers.length; i++) {
-      const rect = rects.get(flood.hosts[i]);
-      if (rect) flood.layers[i].style.clipPath = clipFor(pts, rect.left, rect.top);
+    for (const layer of flood.layers) {
+      const rect = rects.get(layer);
+      if (rect) layer.style.clipPath = clipFor(pts, rect.left, rect.top);
     }
   }
   for (let i = 0; i < els.length; i++) {
@@ -226,6 +256,8 @@ function tick(now: number) {
     for (const host of done.hosts) baseOf(host).setAttribute('data-tone', done.tone);
     for (const layer of done.layers) layer.remove();
   }
+  const live = new Set(floods);
+  applyBarHole(drawn.filter((item) => live.has(item.flood)).map((item) => item.pts));
   if (floods.length) raf = requestAnimationFrame(tick);
   else finish();
 }

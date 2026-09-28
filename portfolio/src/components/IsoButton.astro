@@ -65,6 +65,27 @@ const Tag = href ? 'a' : 'button';
     padding: 0 calc(var(--r) * 0.75) var(--r) calc(var(--r) * 0.75);
   }
 
+  /* The extrusion. Its color fades on its own, so the tilt offsets stay instant. */
+  .iso-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    color: var(--btn-edge);
+    box-shadow:
+      calc(var(--dx) * 0.125) calc(var(--dy) * 0.125) 0 0 currentColor,
+      calc(var(--dx) * 0.25) calc(var(--dy) * 0.25) 0 0 currentColor,
+      calc(var(--dx) * 0.375) calc(var(--dy) * 0.375) 0 0 currentColor,
+      calc(var(--dx) * 0.5) calc(var(--dy) * 0.5) 0 0 currentColor,
+      calc(var(--dx) * 0.625) calc(var(--dy) * 0.625) 0 0 currentColor,
+      calc(var(--dx) * 0.75) calc(var(--dy) * 0.75) 0 0 currentColor,
+      calc(var(--dx) * 0.875) calc(var(--dy) * 0.875) 0 0 currentColor,
+      var(--dx) var(--dy) 0 0 currentColor;
+    transition: color var(--dur-flood-fade) ease;
+  }
+
   .iso-btn {
     --press: 0;
     /* the part of the depth still visible below the face */
@@ -89,16 +110,8 @@ const Tag = href ? 'a' : 'button';
     white-space: nowrap;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    position: relative;
     transform: translate(calc(-1 * var(--dx)), calc(var(--r) - var(--dy)));
-    box-shadow:
-      calc(var(--dx) * 0.125) calc(var(--dy) * 0.125) 0 0 var(--btn-edge),
-      calc(var(--dx) * 0.25) calc(var(--dy) * 0.25) 0 0 var(--btn-edge),
-      calc(var(--dx) * 0.375) calc(var(--dy) * 0.375) 0 0 var(--btn-edge),
-      calc(var(--dx) * 0.5) calc(var(--dy) * 0.5) 0 0 var(--btn-edge),
-      calc(var(--dx) * 0.625) calc(var(--dy) * 0.625) 0 0 var(--btn-edge),
-      calc(var(--dx) * 0.75) calc(var(--dy) * 0.75) 0 0 var(--btn-edge),
-      calc(var(--dx) * 0.875) calc(var(--dy) * 0.875) 0 0 var(--btn-edge),
-      var(--dx) var(--dy) 0 0 var(--btn-edge);
     transition: --press var(--dur-release) var(--ease-spring);
   }
 

@@ -9,10 +9,22 @@ import Icon from './Icon.astro';
 </IsoButton>
 
 <style>
-  /* shows the theme you would switch to */
+  /* Both glyphs share one cell and crossfade, so the swap doesn't pop. */
+  :global(.theme-toggle .iso-btn.iso-btn--icon) {
+    display: grid;
+    place-items: center;
+  }
+  :global(.theme-toggle svg) {
+    grid-area: 1 / 1;
+    transition: opacity var(--dur-flood-fade) ease;
+  }
+  /* The flood's color transition would otherwise replace this and pop the glyph. */
+  :global(html.flooding .theme-toggle svg) {
+    transition: opacity var(--dur-flood-fade) ease;
+  }
   :global(:root[data-theme="dark"] .theme-toggle .icon-moon),
   :global(:root:not([data-theme="dark"]) .theme-toggle .icon-sun) {
-    display: none;
+    opacity: 0;
   }
 </style>
 

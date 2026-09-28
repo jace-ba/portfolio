@@ -180,6 +180,11 @@ html.flooding :where(.site-footer p) {
   margin: 0;
   pointer-events: none;
 }
+/* The new bar fill overscans the shell. The old fill is clipped out of the
+   splash in script, so a covered corner has nothing underneath to fringe. */
+html.flooding .bar[data-flood-host] > .bar-fill[data-flood-clone] {
+  inset: -12px;
+}
 [data-flood-clone],
 [data-flood-clone] * {
   pointer-events: none;

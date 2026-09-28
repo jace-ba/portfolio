@@ -47,9 +47,8 @@ import ThemeToggle from './ThemeToggle.astro';
     padding: var(--space-5);
   }
 
-  /* The painted cell. One radius on this shell clips both color copies, so
-     the lower one cannot show through antialiased corners. Buttons stay
-     outside it and keep tilting. */
+  /* The painted cell. The splash punches the old fill out of the wave, so a
+     covered corner is only the new color. Buttons stay outside it and keep tilting. */
   .bar {
     position: absolute;
     inset: 0;
@@ -61,7 +60,7 @@ import ThemeToggle from './ThemeToggle.astro';
 
   .bar-fill {
     position: absolute;
-    inset: 0;
+    inset: -2px;
     background: var(--surface);
   }
 
