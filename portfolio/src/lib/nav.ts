@@ -1,7 +1,7 @@
 export const navItems = [
-  { href: '/', label: 'Home', icon: 'home' },
-  { href: '/projects', label: 'Projects', icon: 'grid' },
-  { href: '/about', label: 'About me', icon: 'person' },
+  { href: '/', label: 'Home', icon: 'home', variant: 'azure' },
+  { href: '/projects', label: 'Projects', icon: 'grid', variant: 'scarlet' },
+  { href: '/about', label: 'About me', icon: 'person', variant: 'tangerine' },
 ] as const;
 
 /** Whether a nav link should be seated for the given pathname (sub-routes included). */

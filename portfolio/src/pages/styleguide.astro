@@ -4,7 +4,7 @@ import IsoButton from '../components/IsoButton.astro';
 import Icon from '../components/Icon.astro';
 import Tag from '../components/Tag.astro';
 
-const accents = ['orange', 'red', 'blue', 'green'] as const;
+const accents = ['azure', 'scarlet', 'tangerine', 'gold'] as const;
 const variants = ['neutral', ...accents] as const;
 const radii = ['sm', 'md', 'lg', 'xl'] as const;
 ---
@@ -82,7 +82,7 @@ const radii = ['sm', 'md', 'lg', 'xl'] as const;
       <IsoButton size="square"><Icon name="home" />Square</IsoButton>
       <IsoButton size="square" pressed><Icon name="grid" />Pressed</IsoButton>
       <IsoButton size="icon" aria-label="Mail"><Icon name="mail" /></IsoButton>
-      <IsoButton href="#" variant="orange"><Icon name="arrowRight" />Link button</IsoButton>
+      <IsoButton href="#" variant="azure"><Icon name="arrowRight" />Link button</IsoButton>
     </div>
   </section>
 </BaseLayout>

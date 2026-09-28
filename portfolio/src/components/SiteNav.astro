@@ -7,7 +7,7 @@ import { navItems, isCurrentPath } from '../lib/nav';
 <nav class="site-nav" aria-label="Main">
   {
     navItems.map((item) => (
-      <IsoButton href={item.href} size="square" pressed={isCurrentPath(item.href, Astro.url.pathname)}>
+      <IsoButton href={item.href} size="square" variant={item.variant} pressed={isCurrentPath(item.href, Astro.url.pathname)}>
         <Icon name={item.icon} />
         {item.label}
       </IsoButton>

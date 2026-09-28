@@ -3,76 +3,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import IsoButton from '../components/IsoButton.astro';
 import IsoTile from '../components/IsoTile.astro';
 import Icon from '../components/Icon.astro';
-import Tag from '../components/Tag.astro';
-
-const skills = [
-  { title: 'Design', accent: 'orange', items: ['Figma', 'Prototyping', 'Design systems'] },
-  { title: 'Code', accent: 'blue', items: ['Astro', 'TypeScript', 'CSS', 'Accessibility'] },
-  { title: 'Craft', accent: 'green', items: ['Motion', 'Illustration', 'Writing'] },
-] as const;
-
-const jobs = [
-  { when: '2025 – now', role: 'Freelance designer & developer', what: 'Portfolio sites and design systems for small studios.' },
-  { when: '2023 – 2025', role: 'Front-end developer, Example Co.', what: 'Built the component library and led the accessibility pass.' },
-  { when: '2021 – 2023', role: 'Design intern, Sample Studio', what: 'Prototyped interactions and shipped marketing pages.' },
-];
 ---
 
-<BaseLayout title="About" description="About Jace: a designer who codes.">
+<BaseLayout title="About" description="About Jace Baptista-Allan.">
   <div class="page">
     <section class="bio-row">
-      <IsoTile accent="orange" size="portrait" class="portrait" />
+      <IsoTile accent="azure" size="portrait" class="portrait" />
       <div class="intro">
         <p class="eyebrow">About</p>
-        <h1>Hello again.</h1>
-        <p class="lede">
-          I’m Jace, a designer who codes. I like interfaces that feel physical: things that press, tilt, and spring back.
-        </p>
-        <p>
-          Most of my work sits between design and front-end: I sketch in Figma, then finish the details in the browser,
-          where motion and states are real. Outside of work I draw, hike, and keep too many plants.
-        </p>
+        <h1>Jace Baptista-Allan</h1>
       </div>
     </section>
 
     <section class="section" aria-labelledby="skills">
       <h2 id="skills">What I work with</h2>
-      <div class="skills">
-        {
-          skills.map((group) => (
-            <div class="skill-group">
-              <h3>{group.title}</h3>
-              <div class="tags">
-                {group.items.map((item) => <Tag accent={group.accent}>{item}</Tag>)}
-              </div>
-            </div>
-          ))
-        }
-      </div>
+      <div class="skills"></div>
     </section>
 
     <section class="section experience" aria-labelledby="experience">
       <h2 id="experience">Experience</h2>
-      <ol class="jobs">
-        {
-          jobs.map((job) => (
-            <li>
-              <span class="when">{job.when}</span>
-              <div>
-                <h3>{job.role}</h3>
-                <p>{job.what}</p>
-              </div>
-            </li>
-          ))
-        }
-      </ol>
+      <ol class="jobs"></ol>
     </section>
 
     <section class="panel contact" aria-labelledby="contact">
-      <h2 id="contact">Let’s make something together.</h2>
-      <p class="lede">I’m open to freelance projects and full-time roles.</p>
+      <h2 id="contact">Contact</h2>
       <div class="button-row">
-        <IsoButton href="mailto:hello@example.com" variant="orange">
+        <IsoButton href="mailto:jacedba@gmail.com" variant="azure">
           <Icon name="mail" />
           Email me
         </IsoButton>
@@ -97,21 +53,6 @@ const jobs = [
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: var(--space-3);
-  }
-
-  .skill-group {
-    display: grid;
-    gap: var(--space-3);
-    align-content: start;
-    padding: var(--space-5);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-  }
-
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
   }
 
   .experience {

@@ -6,24 +6,14 @@ import ProjectCard from '../components/ProjectCard.astro';
 import { getProjects } from '../lib/projects';
 
 const featured = (await getProjects()).filter((p) => p.data.featured).slice(0, 3);
-
-const services = [
-  { accent: 'orange', title: 'Interface design', body: 'Wireframes to polished UI, with systems that stay consistent as they grow.' },
-  { accent: 'blue', title: 'Front-end development', body: 'Accessible, fast sites built with Astro, TypeScript, and modern CSS.' },
-  { accent: 'green', title: 'Motion & interaction', body: 'Small, physical-feeling details that make an interface fun to use.' },
-];
 ---
 
 <BaseLayout>
   <div class="page">
     <section class="intro hero">
-      <p class="eyebrow">Designer &amp; front-end developer</p>
-      <h1>Hi, I’m Jace. I build tactile, playful interfaces.</h1>
-      <p class="lede">
-        I design and build for the web: warm colors, soft corners, and buttons you actually want to press.
-      </p>
+      <h1>Jace Baptista-Allan</h1>
       <div class="button-row">
-        <IsoButton href="/projects" variant="orange">
+        <IsoButton href="/projects" variant="azure">
           <Icon name="arrowRight" />
           See my projects
         </IsoButton>
@@ -41,16 +31,8 @@ const services = [
       </div>
     </section>
 
-    <section class="panel services" aria-label="What I do">
-      {
-        services.map((s) => (
-          <div class="service">
-            <span class="bar" style={`background: var(--${s.accent})`} />
-            <h3>{s.title}</h3>
-            <p>{s.body}</p>
-          </div>
-        ))
-      }
+    <section class="section" aria-labelledby="services">
+      <h2 id="services">What I do</h2>
     </section>
   </div>
 </BaseLayout>
@@ -58,26 +40,5 @@ const services = [
 <style>
   .hero h1 {
     max-width: 15em;
-  }
-
-  .services {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--space-6);
-  }
-
-  .service {
-    display: grid;
-    gap: var(--space-3);
-    align-content: start;
-  }
-  .service p {
-    color: var(--muted);
-  }
-
-  .bar {
-    width: 40px;
-    height: 8px;
-    border-radius: 4px;
   }
 </style>

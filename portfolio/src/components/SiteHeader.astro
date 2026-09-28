@@ -13,9 +13,16 @@ import ThemeToggle from './ThemeToggle.astro';
     </a>
     <SiteNav />
     <div class="actions">
-      <IsoButton href="/resume.pdf" download size="square">
-        <Icon name="download" />
-        Resume
+      <IsoButton
+        href="/resume.pdf"
+        size="pill"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="resume-link"
+      >
+        RÉSUMÉ
+        <Icon name="external" />
+        <span class="visually-hidden">(opens in a new tab)</span>
       </IsoButton>
       <ThemeToggle />
     </div>
@@ -73,6 +80,10 @@ import ThemeToggle from './ThemeToggle.astro';
     gap: var(--space-3);
   }
 
+  :global(.resume-link) {
+    --iso-icon: 1em;
+  }
+
   @media (max-width: 860px) {
     .site-header {
       --iso-square-size: 72px;
@@ -88,6 +99,22 @@ import ThemeToggle from './ThemeToggle.astro';
     .site-header :global(.site-nav) {
       grid-column: 1 / -1;
       grid-row: 2;
+    }
+  }
+
+  /* The pill is wider than the square it replaced, so pull the row in
+     until the name, résumé, and theme toggle fit side by side. */
+  @media (max-width: 560px) {
+    .site-header {
+      --pill-pad-inline: 0.85rem;
+      column-gap: var(--space-3);
+      padding: var(--space-3);
+    }
+    .brand {
+      padding-inline: 0;
+    }
+    .actions {
+      gap: var(--space-2);
     }
   }
 

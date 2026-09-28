@@ -1,7 +1,7 @@
 ---
 import type { HTMLAttributes } from 'astro/types';
 
-type Variant = 'neutral' | 'orange' | 'red' | 'blue' | 'green';
+type Variant = 'neutral' | 'azure' | 'scarlet' | 'tangerine' | 'gold';
 type Size = 'pill' | 'square' | 'icon';
 
 interface Props extends Omit<HTMLAttributes<'button'>, 'class'> {
@@ -123,7 +123,7 @@ const Tag = href ? 'a' : 'button';
 
   /* ---- sizes ---- */
   .iso-btn--pill {
-    padding: 0.85rem 1.5rem;
+    padding: 0.85rem var(--pill-pad-inline, 1.5rem);
   }
 
   .iso-btn--square {
@@ -133,7 +133,7 @@ const Tag = href ? 'a' : 'button';
     height: var(--iso-square-size, 88px);
     padding: 0;
     font-size: var(--text-xs);
-    letter-spacing: 0.01em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
@@ -144,8 +144,8 @@ const Tag = href ? 'a' : 'button';
   }
 
   .iso-btn :global(svg) {
-    width: 22px;
-    height: 22px;
+    width: var(--iso-icon, 22px);
+    height: var(--iso-icon, 22px);
     flex-shrink: 0;
   }
   .iso-btn--square :global(svg) {
@@ -160,29 +160,29 @@ const Tag = href ? 'a' : 'button';
     --btn-edge: var(--neutral-edge);
     --btn-text: var(--neutral-ink);
   }
-  .iso-btn--orange {
-    --btn-bg: var(--orange);
-    --btn-bg-hover: var(--orange-hover);
-    --btn-edge: var(--orange-edge);
-    --btn-text: var(--on-accent);
+  .iso-btn--azure {
+    --btn-bg: var(--azure);
+    --btn-bg-hover: var(--azure-hover);
+    --btn-edge: var(--azure-edge);
+    --btn-text: var(--azure-label);
   }
-  .iso-btn--red {
-    --btn-bg: var(--red);
-    --btn-bg-hover: var(--red-hover);
-    --btn-edge: var(--red-edge);
-    --btn-text: var(--on-accent);
+  .iso-btn--scarlet {
+    --btn-bg: var(--scarlet);
+    --btn-bg-hover: var(--scarlet-hover);
+    --btn-edge: var(--scarlet-edge);
+    --btn-text: var(--scarlet-label);
   }
-  .iso-btn--blue {
-    --btn-bg: var(--blue);
-    --btn-bg-hover: var(--blue-hover);
-    --btn-edge: var(--blue-edge);
-    --btn-text: var(--on-accent);
+  .iso-btn--tangerine {
+    --btn-bg: var(--tangerine);
+    --btn-bg-hover: var(--tangerine-hover);
+    --btn-edge: var(--tangerine-edge);
+    --btn-text: var(--tangerine-label);
   }
-  .iso-btn--green {
-    --btn-bg: var(--green);
-    --btn-bg-hover: var(--green-hover);
-    --btn-edge: var(--green-edge);
-    --btn-text: var(--on-accent);
+  .iso-btn--gold {
+    --btn-bg: var(--gold);
+    --btn-bg-hover: var(--gold-hover);
+    --btn-edge: var(--gold-edge);
+    --btn-text: var(--gold-label);
   }
 </style>
 

@@ -1,6 +1,6 @@
 ---
 interface Props {
-  accent?: 'orange' | 'red' | 'blue' | 'green' | 'neutral';
+  accent?: 'azure' | 'scarlet' | 'tangerine' | 'gold' | 'neutral';
 }
 
 const { accent = 'neutral' } = Astro.props;
@@ -22,8 +22,8 @@ const { accent = 'neutral' } = Astro.props;
   }
 
   .tag--neutral { background: var(--neutral); color: var(--muted); }
-  .tag--orange { background: var(--orange-tint); color: var(--orange-ink); }
-  .tag--red { background: var(--red-tint); color: var(--red-ink); }
-  .tag--blue { background: var(--blue-tint); color: var(--blue-ink); }
-  .tag--green { background: var(--green-tint); color: var(--green-ink); }
+  .tag--azure { background: var(--azure-tint); color: var(--azure-ink); }
+  .tag--scarlet { background: var(--scarlet-tint); color: var(--scarlet-ink); }
+  .tag--tangerine { background: var(--tangerine-tint); color: var(--tangerine-ink); }
+  .tag--gold { background: var(--gold-tint); color: var(--gold-ink); }
 </style>

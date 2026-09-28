@@ -1,25 +1,10 @@
-/* Design tokens. Light (warm) is the default; dark overrides only the
-   theme-dependent scalars and neutrals, so every derived color follows.
-
-   Accents are one tetradic rectangle in OKLCH: orange/blue and red/green
-   are the two complementary pairs. All four share one lightness and chroma
-   per theme. Contrast (WCAG AA, 4.5:1) was checked for --on-accent over
-   each accent and for each --*-ink over --bg and --surface; re-check if
-   you change the L or C values. */
+/* Design tokens. Light (warm) is the default; dark overrides neutrals and
+   accent ink. Accent fills, hovers, edges, and labels are the same in both
+   themes. See docs/design-spec.md. Re-check WCAG AA (4.5:1) if any accent
+   value changes: labels on fills, and each ink on --bg, --surface, and its tint. */
 
 :root {
   color-scheme: light;
-
-  --hue-red: 25;
-  --hue-orange: 55;
-  --hue-green: 145;
-  --hue-blue: 250;
-
-  --accent-l: 0.66;
-  --accent-hover-l: 0.7;
-  --accent-ink-l: 0.46;
-  --accent-c: 0.16;
-  --on-accent: #2a2420;
 
   --bg: #f6f1ea;
   --surface: #fffaf3;
@@ -31,16 +16,37 @@
   --neutral: #e6ddd0;
   --neutral-hover: #ebe3d8;
   --neutral-ink: #3a322c;
+
+  /* Analogous complement: scarlet, tangerine, and gold sit together and
+     opposite azure. Fills are the given hex. Edges are darkened and shifted
+     toward the shadow hue so they stay saturated. */
+  --azure: #1b9ff6;
+  --azure-hover: #3aaafd;
+  --azure-edge: #225ba7;
+  --azure-label: #051727;
+  --azure-ink: #006eaf;
+
+  --scarlet: #fc4f4f;
+  --scarlet-hover: #fe6964;
+  --scarlet-edge: #a51836;
+  --scarlet-label: #250e0d;
+  --scarlet-ink: #b83c3b;
+
+  --tangerine: #fc8d31;
+  --tangerine-hover: #fe9e58;
+  --tangerine-edge: #aa4921;
+  --tangerine-label: #241104;
+  --tangerine-ink: #a85500;
+
+  --gold: #fbc024;
+  --gold-hover: #fece63;
+  --gold-edge: #ab6c1c;
+  --gold-label: #1e1400;
+  --gold-ink: #8c6800;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-
-  --accent-l: 0.78;
-  --accent-hover-l: 0.82;
-  --accent-ink-l: 0.82;
-  --accent-c: 0.15;
-  --on-accent: #1a1816;
 
   --bg: #1a1816;
   --surface: #24211e;
@@ -54,43 +60,25 @@
   --neutral-ink: #efe9e2;
   /* a lighter mix than the accents so the edge still separates from --surface */
   --neutral-edge: color-mix(in oklch, var(--neutral) 80%, black);
+
+  /* scarlet and azure fills miss AA on their dark tints */
+  --azure-ink: #2da1f3;
+  --scarlet-ink: #fb6b66;
+  --tangerine-ink: var(--tangerine);
+  --gold-ink: var(--gold);
 }
 
 :root {
-  /* ---- accents (derived; do not override per theme) ---- */
-  --orange: oklch(var(--accent-l) var(--accent-c) var(--hue-orange));
-  --red: oklch(var(--accent-l) var(--accent-c) var(--hue-red));
-  --blue: oklch(var(--accent-l) var(--accent-c) var(--hue-blue));
-  --green: oklch(var(--accent-l) var(--accent-c) var(--hue-green));
-
-  --orange-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-orange));
-  --red-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-red));
-  --blue-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-blue));
-  --green-hover: oklch(var(--accent-hover-l) var(--accent-c) var(--hue-green));
-
-  /* the isometric side face */
-  --orange-edge: color-mix(in oklch, var(--orange) 70%, black);
-  --red-edge: color-mix(in oklch, var(--red) 70%, black);
-  --blue-edge: color-mix(in oklch, var(--blue) 70%, black);
-  --green-edge: color-mix(in oklch, var(--green) 70%, black);
   --neutral-edge: color-mix(in oklch, var(--neutral) 70%, black);
 
-  /* soft accent backgrounds (tags, thumbnails); --*-ink text passes AA on these */
-  --orange-tint: color-mix(in oklab, var(--orange) 16%, var(--surface));
-  --red-tint: color-mix(in oklab, var(--red) 16%, var(--surface));
-  --blue-tint: color-mix(in oklab, var(--blue) 16%, var(--surface));
-  --green-tint: color-mix(in oklab, var(--green) 16%, var(--surface));
+  --azure-tint: color-mix(in oklab, var(--azure) 16%, var(--surface));
+  --scarlet-tint: color-mix(in oklab, var(--scarlet) 16%, var(--surface));
+  --tangerine-tint: color-mix(in oklab, var(--tangerine) 16%, var(--surface));
+  --gold-tint: color-mix(in oklab, var(--gold) 16%, var(--surface));
 
-  /* accent used as text (links, labels) on --bg / --surface */
-  --orange-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-orange));
-  --red-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-red));
-  --blue-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-blue));
-  --green-ink: oklch(var(--accent-ink-l) var(--accent-c) var(--hue-green));
-
-  /* provisional roles; see "Accent roles" decision */
-  --primary: var(--orange);
-  --link: var(--blue-ink);
-  --focus-ring: var(--blue);
+  --primary: var(--azure);
+  --link: var(--azure-ink);
+  --focus-ring: var(--azure-ink);
 
   /* ---- shape: about 2x the usual radius scale ---- */
   --radius-sm: 10px;

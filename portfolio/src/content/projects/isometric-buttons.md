@@ -3,7 +3,7 @@ title: Isometric buttons
 summary: A tactile button component with cursor-driven tilt and a springy press.
 category: Interaction
 stack: Astro
-accent: orange
+accent: azure
 year: 2026
 order: 1
 featured: true
