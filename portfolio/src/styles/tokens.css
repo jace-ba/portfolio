@@ -1,11 +1,22 @@
 /* Design tokens. Light (warm) is the default; dark overrides neutrals, the
-   accent adjustment, and accent ink. See docs/design-spec.md. Re-check WCAG AA
-   if any accent value changes: labels on fills (4.5:1), each ink on --bg,
-   --surface, and its tint (4.5:1), and each edge on --bg and --surface (3:1). */
+   accent adjustment, and accent ink. The same overrides are also declared on
+   [data-tone] so the theme flood can recolor one element at a time. Derived
+   accents are declared on [data-tone] too, because a custom property inherits
+   already resolved: a child that only overrides the knobs would keep the
+   parent's computed fill. See docs/design-spec.md. Re-check WCAG AA if any
+   accent value changes: labels on fills (4.5:1), each ink on --bg, --surface,
+   and its tint (4.5:1), and each edge on --bg and --surface (3:1). */
 
 :root {
   color-scheme: light;
+}
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root,
+[data-tone="light"] {
   --bg: #f6f1ea;
   --surface: #fffaf3;
   --surface-sunken: #efe7dc;
@@ -37,11 +48,12 @@
   --tangerine-ink: #a85500;
   --gold-label: #1e1400;
   --gold-ink: #8c6800;
+
+  --neutral-edge: color-mix(in oklch, var(--neutral) 76%, black);
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-
+:root[data-theme="dark"],
+[data-tone="dark"] {
   --bg: #1a1816;
   --surface: #24211e;
   --surface-sunken: #141210;
@@ -71,9 +83,8 @@
   --gold-ink: var(--gold);
 }
 
-:root {
-  --neutral-edge: color-mix(in oklch, var(--neutral) 76%, black);
-
+:root,
+[data-tone] {
   /* Analogous complement: scarlet, tangerine, and gold sit together, opposite
      azure. Base L C H are the given hexes (#1b9ff6, #fc4f4f, #fc8d31, #fbc024),
      shown unchanged in dark mode. --X-shade is the hue a shadow turns toward. */
@@ -166,7 +177,9 @@
   --primary: var(--azure);
   --link: var(--azure-ink);
   --focus-ring: var(--azure-ink);
+}
 
+:root {
   /* ---- shape: about 2x the usual radius scale ---- */
   --radius-sm: 10px;
   --radius-md: 16px;
@@ -210,6 +223,10 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-press: 70ms;
   --dur-release: 220ms;
+  /* one splash covers the page; text eases as the paint arrives */
+  --dur-flood: 1200ms;
+  --dur-flood-fade: 250ms;
+  --dur-flood-lead: 120ms;
 
   --content-width: 1080px;
 }

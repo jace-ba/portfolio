@@ -115,6 +115,22 @@ const Tag = href ? 'a' : 'button';
     transition: --press var(--dur-press) var(--ease-press);
   }
 
+  /* Keep the press timing, and let the face recolor with the splash. */
+  :global(html.flooding) .iso-btn {
+    transition:
+      --press var(--dur-release) var(--ease-spring),
+      background-color var(--dur-flood-fade) ease,
+      color var(--dur-flood-fade) ease;
+  }
+
+  :global(html.flooding) .iso-btn:active,
+  :global(html.flooding) .iso-btn.is-pressed {
+    transition:
+      --press var(--dur-press) var(--ease-press),
+      background-color var(--dur-flood-fade) ease,
+      color var(--dur-flood-fade) ease;
+  }
+
   .iso-btn:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 3px;
