@@ -59,17 +59,30 @@ function ms(name: string, fallback: number) {
   return fallback;
 }
 
+/** The canvas covers the layout viewport, which excludes the scrollbar.
+    innerWidth includes it, so sizing from that scales every point toward the corner. */
+function viewport() {
+  const view = document.documentElement;
+  return { width: view.clientWidth, height: view.clientHeight };
+}
+
 function fit() {
   if (!canvas || !ctx) return;
+  const { width: viewW, height: viewH } = viewport();
+  if (viewW < 1 || viewH < 1) return;
   const dpr = Math.min(devicePixelRatio || 1, 2);
-  const width = Math.round(innerWidth * dpr);
-  const height = Math.round(innerHeight * dpr);
-  if (canvas.width === width && canvas.height === height) return;
-  canvas.width = width;
-  canvas.height = height;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  cw = innerWidth;
-  ch = innerHeight;
+  const width = Math.round(viewW * dpr);
+  const height = Math.round(viewH * dpr);
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  // Browser zoom keeps viewW * dpr constant, so the bitmap often does not
+  // change. The scale still has to follow the new CSS size, or the splash
+  // stays where it was at the previous zoom.
+  ctx.setTransform(width / viewW, 0, 0, height / viewH, 0, 0);
+  cw = viewW;
+  ch = viewH;
 }
 
 function makeShape(): Wave[] {
@@ -280,7 +293,8 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const box = origin.getBoundingClientRect();
   const cx = box.left + box.width / 2;
   const cy = box.top + box.height / 2;
-  const far = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy));
+  const view = viewport();
+  const far = Math.hypot(Math.max(cx, view.width - cx), Math.max(cy, view.height - cy));
   const Rmax = far * cover;
   const lead = ms('--dur-flood-lead', 120);
   const start = performance.now();
@@ -292,9 +306,6 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const oldBg = fresh ? getComputedStyle(document.body).backgroundColor : null;
 
   fit();
-  // A resize may have returned before recording the viewport, so keep cw current.
-  cw = innerWidth;
-  ch = innerHeight;
   if (fresh) {
     floorTone = root.dataset.theme === 'dark' ? 'dark' : 'light';
     if (oldBg) root.style.setProperty('--floor', oldBg);
