@@ -153,6 +153,8 @@ function buildLayers(tone: Tone) {
     clone.removeAttribute('data-flood-host');
     clone.removeAttribute('id');
     clone.querySelectorAll('[data-tone]').forEach((node) => node.removeAttribute('data-tone'));
+    const fg = clone.style.getPropertyValue(`--flood-fg-${tone}`);
+    if (fg) clone.style.setProperty('--flood-fg', fg);
     clone.dataset.tone = tone;
     clone.dataset.floodClone = '';
     clone.inert = true;
@@ -181,13 +183,24 @@ function recordColors(current: Tone) {
     const { style } = el as HTMLElement;
     style.setProperty(`--flood-fg-${current}`, now[i]);
     style.setProperty(`--flood-fg-${other}`, flipped[i]);
+    style.setProperty('--flood-fg', now[i]);
   });
+}
+
+/** Point the fading color at this tone. The property is one registered color,
+    so changing it eases. Swapping which variable `color` points at does not. */
+function paint(el: Element, tone: Tone) {
+  const { style } = el as HTMLElement;
+  const value = style.getPropertyValue(`--flood-fg-${tone}`);
+  if (value) style.setProperty('--flood-fg', value);
+  if (el.getAttribute('data-tone') !== tone) el.setAttribute('data-tone', tone);
 }
 
 function clearTones() {
   for (const el of els) el.removeAttribute('data-tone');
   for (const el of recorded) {
     const { style } = el as HTMLElement;
+    style.removeProperty('--flood-fg');
     style.removeProperty('--flood-fg-light');
     style.removeProperty('--flood-fg-dark');
     if (!el.getAttribute('style')) el.removeAttribute('style');
@@ -210,23 +223,23 @@ export function endFlood() {
   removeClones();
   ctx?.clearRect(0, 0, cw, ch);
   root.style.removeProperty('--floor');
-  clearTones();
-  document.querySelectorAll('[data-tone]').forEach((el) => el.removeAttribute('data-tone'));
   settle();
 }
 
-/** Leave splash mode. The page's color-scheme only follows the theme once nothing is fading. */
+/** Leave splash mode. Drop the recorded colors only after the flood rules are
+    gone, so a fade that is still running is not retargeted. */
 function settle() {
-  root.classList.remove('flooding');
+  root.classList.remove('flooding', 'flood-fade');
   root.style.removeProperty('color-scheme');
+  clearTones();
+  document.querySelectorAll('[data-tone]').forEach((el) => el.removeAttribute('data-tone'));
 }
 
 function finish() {
   ctx?.clearRect(0, 0, cw, ch);
   root.style.removeProperty('--floor');
-  clearTones();
-  // The root theme already matches the settled splash, so the hosts can inherit it.
-  for (const host of hosts()) host.removeAttribute('data-tone');
+  // Tones stay through the fade. Removing them here retargets any color that
+  // is still easing, which reads as a flicker on the elements just reached.
   const fade = ms('--dur-flood-fade', 250);
   cleanupTimer = window.setTimeout(settle, fade + 150);
 }
@@ -256,14 +269,14 @@ function tick(now: number) {
   for (let i = 0; i < els.length; i++) {
     let tone = floorTone;
     for (const flood of floods) if (now >= flood.arr[i]) tone = flood.tone;
-    if (tone && els[i].getAttribute('data-tone') !== tone) els[i].setAttribute('data-tone', tone);
+    if (tone && els[i].getAttribute('data-tone') !== tone) paint(els[i], tone);
   }
   while (floods.length && now - floods[0].start >= duration) {
     const done = floods.shift();
     if (!done) break;
     floorTone = done.tone;
     root.style.setProperty('--floor', done.color);
-    for (const host of done.hosts) host.setAttribute('data-tone', done.tone);
+    for (const host of done.hosts) paint(host, done.tone);
     for (const layer of done.layers) layer.remove();
   }
   if (floods.length) raf = requestAnimationFrame(tick);
@@ -316,6 +329,9 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     // inherited color transition on each frame, so text crawls and icons flicker.
     root.style.setProperty('color-scheme', floorTone);
     root.classList.add('flooding');
+    // Commit the recorded color before the fade exists, or text eases in from transparent.
+    void root.offsetWidth;
+    root.classList.add('flood-fade');
   }
   commit(next);
 

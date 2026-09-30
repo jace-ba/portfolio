@@ -128,20 +128,34 @@ const Tag = href ? 'a' : 'button';
     transition: --press var(--dur-press) var(--ease-press);
   }
 
-  /* Keep the press timing, and let the face recolor with the splash. */
+  /* Keep the press timing, and let the face recolor with the splash.
+     --flood-fg is the recorded text color. Transitioning `color` as well
+     fights it and the fade cancels. flood-fade waits until that color is
+     already showing, so the fade does not start from transparent. */
   :global(html.flooding) .iso-btn {
     transition:
       --press var(--dur-release) var(--ease-spring),
-      background-color var(--dur-flood-fade) ease,
-      color var(--dur-flood-fade) ease;
+      background-color var(--dur-flood-fade) ease;
+  }
+  :global(html.flooding.flood-fade) .iso-btn {
+    transition:
+      --press var(--dur-release) var(--ease-spring),
+      --flood-fg var(--dur-flood-fade) ease,
+      background-color var(--dur-flood-fade) ease;
   }
 
   :global(html.flooding) .iso-btn:active,
   :global(html.flooding) .iso-btn.is-pressed {
     transition:
       --press var(--dur-press) var(--ease-press),
-      background-color var(--dur-flood-fade) ease,
-      color var(--dur-flood-fade) ease;
+      background-color var(--dur-flood-fade) ease;
+  }
+  :global(html.flooding.flood-fade) .iso-btn:active,
+  :global(html.flooding.flood-fade) .iso-btn.is-pressed {
+    transition:
+      --press var(--dur-press) var(--ease-press),
+      --flood-fg var(--dur-flood-fade) ease,
+      background-color var(--dur-flood-fade) ease;
   }
 
   .iso-btn:focus-visible {

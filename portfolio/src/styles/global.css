@@ -146,29 +146,27 @@ html.flooding #flood {
   display: block;
 }
 
-/* An inherited color is resolved in the parent's theme, so it would flip when
-   the paint reaches the parent. The splash records every element's color in
-   both themes (theme-flood.ts), and each element shows the one for its own
-   tone. Layered, so any color or transition a component declares still wins. */
-@property --flood-fg-light {
-  syntax: '*';
+/* An inherited color follows its ancestor, so the fade restarts when that
+   ancestor flips. The splash records every element's own text color and
+   writes the one for its current tone into --flood-fg (theme-flood.ts).
+   One variable, registered as a color, so the switch interpolates instead
+   of stepping. Important only while a splash is running. The transition
+   stays in the layer: a component's own transition still wins. */
+@property --flood-fg {
+  syntax: '<color>';
   inherits: false;
-}
-@property --flood-fg-dark {
-  syntax: '*';
-  inherits: false;
+  initial-value: transparent;
 }
 
 @layer flood {
-  html.flooding :where(body [data-tone="light"]) {
-    color: var(--flood-fg-light);
+  html.flooding :where(body [data-tone]) {
+    color: var(--flood-fg) !important;
   }
-  html.flooding :where(body [data-tone="dark"]) {
-    color: var(--flood-fg-dark);
-  }
-  html.flooding :where(body *) {
+  /* Armed a beat after the recorded color is applied. If the transition
+     exists in the same moment the variable is set, it eases in from transparent. */
+  html.flooding.flood-fade :where(body *) {
     transition:
-      color var(--dur-flood-fade) ease,
+      --flood-fg var(--dur-flood-fade) ease,
       background-color var(--dur-flood-fade) ease,
       border-color var(--dur-flood-fade) ease;
   }
