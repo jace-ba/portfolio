@@ -5,35 +5,64 @@ import SiteNav from './SiteNav.astro';
 import ThemeToggle from './ThemeToggle.astro';
 ---
 
-<div class="container header-wrap" transition:persist="site-header" transition:animate="none">
-  <header class="site-header">
-    <div class="bar">
-      <div class="bar-fill" data-flood-host></div>
-    </div>
-    <a class="brand" href="/" data-flood-host>
-      <span class="brand-given">Jace</span>
-      <span class="brand-family">Baptista-Allan</span>
-    </a>
-    <SiteNav />
-    <div class="actions">
-      <IsoButton
-        href="/resume.pdf"
-        size="pill"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="resume-link"
-      >
-        RÉSUMÉ
-        <Icon name="external" />
-        <span class="visually-hidden">(opens in a new tab)</span>
-      </IsoButton>
-      <ThemeToggle />
-    </div>
-  </header>
+<div class="header-sticky" transition:persist="site-header" transition:animate="none">
+  <!-- Page color behind the bar, including the gutters, so content scrolling
+       under the pinned header stays hidden. Sliced with the theme splash. -->
+  <div class="header-scrim" data-flood-host aria-hidden="true"></div>
+  <div class="container header-wrap">
+    <header class="site-header">
+      <div class="bar">
+        <div class="bar-fill" data-flood-host></div>
+      </div>
+      <a class="brand" href="/" data-flood-host>
+        <span class="brand-given">Jace</span>
+        <span class="brand-family">Baptista-Allan</span>
+      </a>
+      <SiteNav />
+      <div class="actions">
+        <IsoButton
+          href="/resume.pdf"
+          size="pill"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="resume-link"
+        >
+          RÉSUMÉ
+          <Icon name="external" />
+          <span class="visually-hidden">(opens in a new tab)</span>
+        </IsoButton>
+        <ThemeToggle />
+      </div>
+    </header>
+  </div>
 </div>
 
 <style>
+  .header-sticky {
+    position: sticky;
+    top: 0;
+    /* Above the page. The skip link sits at 10. */
+    z-index: 5;
+  }
+
+  /* Background stays on the class so the splash copy, which drops
+     data-flood-host, still paints. The attribute selector only wins
+     position: [data-flood-host] would otherwise drop this into the flow
+     as an empty box. */
+  .header-scrim {
+    background: var(--bg);
+    pointer-events: none;
+  }
+
+  .header-scrim[data-flood-host] {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
   .header-wrap {
+    position: relative;
+    z-index: 1;
     padding-top: var(--space-5);
   }
 
