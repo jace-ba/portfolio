@@ -1,10 +1,13 @@
 // The new theme pours out of the toggle as a wobbly splash. Each element
-// keeps the old colors, via data-tone, until the paint reaches it. The nav
-// bar, the logo, and page titles are drawn again inside themselves: the copy
-// is clipped to the same polygon the background canvas fills, so the edge
-// cannot drift, and only that clip changes each frame. Buttons stay whole and
-// keep tilting. A second press before the splash settles pours the other
-// color over the first.
+// keeps the old colors, via data-tone, until the paint reaches it. Text, the
+// button edge, and any background or border that changes then ease on their
+// own animations. A CSS transition would jump back to the original color when
+// an ancestor restyles, and a background transition can also be drawn one
+// frame late by the compositor. The nav bar, the logo, and page titles are
+// drawn again inside themselves: the copy is clipped to the same polygon the
+// background canvas fills, so the edge cannot drift, and only that clip
+// changes each frame. Buttons stay whole and keep tilting. A second press
+// before the splash settles pours the other color over the first.
 
 type Tone = 'light' | 'dark';
 
@@ -39,6 +42,23 @@ const ctx = canvas?.getContext('2d') ?? null;
 let floods: Flood[] = [];
 let els: Element[] = [];
 let recorded: Element[] = [];
+/** Resolved text color in each tone. An animation eases between these. */
+let colors = new Map<Element, Record<Tone, string>>();
+/** Button-edge color in each tone. A separate animation eases the extrusion. */
+let edges = new Map<Element, Record<Tone, string>>();
+/** Background and border colors, only where the two tones differ. */
+let fills = new Map<Element, Record<Tone, string>>();
+let lines = new Map<Element, Record<Tone, string>>();
+/** Inline `color` from before the splash, restored when it settles. */
+let priorColor = new Map<Element, string>();
+/** Elements already handed to an animation. A later splash reads their live color. */
+let arrived = new Set<Element>();
+type FadeKind = 'text' | 'edge' | 'fill' | 'line';
+type Fade = { anim: Animation; el: HTMLElement; kind: FadeKind };
+/** Color animations started by this splash. Nothing here is a CSS transition. */
+let fades: Fade[] = [];
+let fadeMs = 250;
+let tail = false;
 let floorTone: Tone | null = null;
 let raf = 0;
 let cleanupTimer = 0;
@@ -153,8 +173,8 @@ function buildLayers(tone: Tone) {
     clone.removeAttribute('data-flood-host');
     clone.removeAttribute('id');
     clone.querySelectorAll('[data-tone]').forEach((node) => node.removeAttribute('data-tone'));
-    const fg = clone.style.getPropertyValue(`--flood-fg-${tone}`);
-    if (fg) clone.style.setProperty('--flood-fg', fg);
+    const pair = colors.get(host);
+    if (pair) clone.style.color = pair[tone];
     clone.dataset.tone = tone;
     clone.dataset.floodClone = '';
     clone.inert = true;
@@ -167,46 +187,188 @@ function buildLayers(tone: Tone) {
   return { hosts: hostList, layers };
 }
 
-/** Record each element's text color in both themes, so an inherited color can
-    change when the paint reaches that element instead of its parent. */
+type Sample = { color: string; bg: string; border: string; borderOn: boolean };
+
+function sampleStyle(el: Element): Sample {
+  const style = getComputedStyle(el);
+  return {
+    color: style.color,
+    bg: style.backgroundColor,
+    border: style.borderTopColor,
+    borderOn:
+      parseFloat(style.borderTopWidth) > 0 ||
+      parseFloat(style.borderRightWidth) > 0 ||
+      parseFloat(style.borderBottomWidth) > 0 ||
+      parseFloat(style.borderLeftWidth) > 0,
+  };
+}
+
+/** A fill or border is worth easing only when the two tones actually differ. */
+function changed(now: string, next: string) {
+  if (now === next) return false;
+  const blank = (color: string) => color === 'transparent' || color === 'rgba(0, 0, 0, 0)';
+  return !blank(now) || !blank(next);
+}
+
+/** Record each element's colors in both themes. An inherited color would
+    follow its parent; the element's own color changes when the paint reaches it. */
 function recordColors(current: Tone) {
   const other: Tone = current === 'dark' ? 'light' : 'dark';
   recorded = [...els, ...hosts()];
-  const now = recorded.map((el) => getComputedStyle(el).color);
+  const edged = recorded.filter((el) => el.classList.contains('iso-btn'));
+  const now = recorded.map(sampleStyle);
+  const nowEdge = edged.map((el) => getComputedStyle(el, '::before').color);
   // Tones, not the root theme, so nothing keyed to the theme starts moving.
   const toned = [document.body, ...recorded];
   for (const el of toned) el.setAttribute('data-tone', other);
-  const flipped = recorded.map((el) => getComputedStyle(el).color);
+  const flipped = recorded.map(sampleStyle);
+  const flippedEdge = edged.map((el) => getComputedStyle(el, '::before').color);
   for (const el of toned) el.setAttribute('data-tone', current);
   document.body.removeAttribute('data-tone');
   recorded.forEach((el, i) => {
-    const { style } = el as HTMLElement;
-    style.setProperty(`--flood-fg-${current}`, now[i]);
-    style.setProperty(`--flood-fg-${other}`, flipped[i]);
-    style.setProperty('--flood-fg', now[i]);
+    colors.set(el, { [current]: now[i].color, [other]: flipped[i].color } as Record<Tone, string>);
+    if (changed(now[i].bg, flipped[i].bg)) {
+      fills.set(el, { [current]: now[i].bg, [other]: flipped[i].bg } as Record<Tone, string>);
+    }
+    if ((now[i].borderOn || flipped[i].borderOn) && changed(now[i].border, flipped[i].border)) {
+      lines.set(el, { [current]: now[i].border, [other]: flipped[i].border } as Record<Tone, string>);
+    }
+  });
+  edged.forEach((el, i) => {
+    edges.set(el, { [current]: nowEdge[i], [other]: flippedEdge[i] } as Record<Tone, string>);
   });
 }
 
-/** Point the fading color at this tone. The property is one registered color,
-    so changing it eases. Swapping which variable `color` points at does not. */
-function paint(el: Element, tone: Tone) {
-  const { style } = el as HTMLElement;
-  const value = style.getPropertyValue(`--flood-fg-${tone}`);
-  if (value) style.setProperty('--flood-fg', value);
+/** Pin the color already on screen, before the theme flips, so a parent
+    change cannot restart this element's fade. */
+function lockColors(tone: Tone) {
+  for (const el of recorded) {
+    const pair = colors.get(el);
+    if (!pair) continue;
+    const { style } = el as HTMLElement;
+    if (!priorColor.has(el)) priorColor.set(el, style.getPropertyValue('color'));
+    style.setProperty('color', pair[tone]);
+  }
+}
+
+function dropFades(el: Element) {
+  fades = fades.filter((fade) => {
+    if (fade.el !== el) return true;
+    fade.anim.cancel();
+    return false;
+  });
+}
+
+/** Ease from the color on screen to the destination. A later call continues from the current frame, not the original color. */
+function fadeColor(el: Element, from: string, to: string, pseudoElement?: string) {
+  if (from === to) return;
+  const anim = (el as HTMLElement).animate([{ color: from }, { color: to }], {
+    duration: fadeMs,
+    easing: 'ease',
+    fill: 'forwards',
+    ...(pseudoElement ? { pseudoElement } : {}),
+  });
+  fades.push({ anim, el: el as HTMLElement, kind: pseudoElement ? 'edge' : 'text' });
+}
+
+/** A registered custom property, animated on the main thread. The from value is
+    written in the same task as the attribute, so the first frame is the color
+    already showing and never the property's transparent initial value. */
+function fadePaint(
+  el: HTMLElement,
+  kind: 'fill' | 'line',
+  from: string,
+  to: string,
+) {
+  const prop = kind === 'fill' ? '--flood-bg' : '--flood-border';
+  const attr = kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
+  if (from === to) {
+    el.removeAttribute(attr);
+    el.style.removeProperty(prop);
+    return;
+  }
+  el.style.setProperty(prop, from);
+  el.setAttribute(attr, '');
+  const frames: Keyframe[] = [{ [prop]: from }, { [prop]: to }];
+  const anim = el.animate(frames, { duration: fadeMs, easing: 'ease', fill: 'forwards' });
+  fades.push({ anim, el, kind });
+}
+
+type Live = { text?: string; edge?: string; fill?: string; line?: string };
+
+/** Move this element to the tone now under it. Hosts snap; the clipped copy already shows the destination. */
+function paint(el: Element, tone: Tone, snap = false, live?: Live) {
+  const pair = colors.get(el);
+  const edge = edges.get(el);
+  const fill = fills.get(el);
+  const line = lines.get(el);
+  const showing = el.getAttribute('data-tone') === 'dark' ? 'dark' : 'light';
+  const node = el as HTMLElement;
+  if (snap) {
+    dropFades(el);
+    node.removeAttribute('data-flood-fill');
+    node.removeAttribute('data-flood-line');
+    node.style.removeProperty('--flood-bg');
+    node.style.removeProperty('--flood-border');
+    if (pair) node.style.setProperty('color', pair[tone]);
+  } else {
+    dropFades(el);
+    if (pair) fadeColor(el, live?.text ?? pair[showing], pair[tone]);
+    if (edge) fadeColor(el, live?.edge ?? edge[showing], edge[tone], '::before');
+    if (fill) fadePaint(node, 'fill', live?.fill ?? fill[showing], fill[tone]);
+    if (line) fadePaint(node, 'line', live?.line ?? line[showing], line[tone]);
+  }
   if (el.getAttribute('data-tone') !== tone) el.setAttribute('data-tone', tone);
+  arrived.add(el);
+}
+
+function stopFades() {
+  for (const fade of fades) fade.anim.cancel();
+  fades = [];
+}
+
+/** Hand a finished fill back to the stylesheet. The tone is already the destination, so nothing jumps, and hover works again. */
+function releaseFinished() {
+  fades = fades.filter((fade) => {
+    if (fade.kind !== 'fill' && fade.kind !== 'line') return true;
+    if (fade.anim.playState !== 'finished') return true;
+    const prop = fade.kind === 'fill' ? '--flood-bg' : '--flood-border';
+    const attr = fade.kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
+    fade.el.removeAttribute(attr);
+    fade.el.style.removeProperty(prop);
+    fade.anim.cancel();
+    return false;
+  });
+}
+
+function fillsOpen() {
+  return fades.some(
+    (fade) => (fade.kind === 'fill' || fade.kind === 'line') && fade.anim.playState !== 'finished',
+  );
 }
 
 function clearTones() {
   for (const el of els) el.removeAttribute('data-tone');
   for (const el of recorded) {
-    const { style } = el as HTMLElement;
-    style.removeProperty('--flood-fg');
-    style.removeProperty('--flood-fg-light');
-    style.removeProperty('--flood-fg-dark');
+    const node = el as HTMLElement;
+    const { style } = node;
+    const previous = priorColor.get(el);
+    if (previous) style.setProperty('color', previous);
+    else style.removeProperty('color');
+    node.removeAttribute('data-flood-fill');
+    node.removeAttribute('data-flood-line');
+    style.removeProperty('--flood-bg');
+    style.removeProperty('--flood-border');
     if (!el.getAttribute('style')) el.removeAttribute('style');
   }
   els = [];
   recorded = [];
+  colors = new Map();
+  edges = new Map();
+  fills = new Map();
+  lines = new Map();
+  priorColor = new Map();
+  arrived = new Set();
 }
 
 function removeClones() {
@@ -229,34 +391,64 @@ export function endFlood() {
 /** Leave splash mode. Drop the recorded colors only after the flood rules are
     gone, so a fade that is still running is not retargeted. */
 function settle() {
-  root.classList.remove('flooding', 'flood-fade');
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
+  tail = false;
+  root.classList.remove('flooding');
   root.style.removeProperty('color-scheme');
+  stopFades();
   clearTones();
   document.querySelectorAll('[data-tone]').forEach((el) => el.removeAttribute('data-tone'));
+  document.querySelectorAll('[data-flood-fill], [data-flood-line]').forEach((el) => {
+    el.removeAttribute('data-flood-fill');
+    el.removeAttribute('data-flood-line');
+    if (el instanceof HTMLElement) {
+      el.style.removeProperty('--flood-bg');
+      el.style.removeProperty('--flood-border');
+    }
+  });
 }
 
-function finish() {
-  ctx?.clearRect(0, 0, cw, ch);
-  root.style.removeProperty('--floor');
-  // Tones stay through the fade. Removing them here retargets any color that
-  // is still easing, which reads as a flicker on the elements just reached.
-  const fade = ms('--dur-flood-fade', 250);
-  cleanupTimer = window.setTimeout(settle, fade + 150);
+
+/** Colors a second splash has to continue from. Read in one pass, before any write. */
+function readLive(jobs: { el: Element }[]): Map<Element, Live> {
+  const live = new Map<Element, Live>();
+  for (const job of jobs) {
+    if (!arrived.has(job.el)) continue;
+    const sample: Live = {};
+    if (colors.has(job.el)) sample.text = getComputedStyle(job.el).color;
+    if (edges.has(job.el)) sample.edge = getComputedStyle(job.el, '::before').color;
+    if (fills.has(job.el)) sample.fill = getComputedStyle(job.el).backgroundColor;
+    if (lines.has(job.el)) sample.line = getComputedStyle(job.el).borderTopColor;
+    live.set(job.el, sample);
+  }
+  return live;
 }
 
 function tick(now: number) {
   raf = 0;
   if (!ctx) return;
-  fit();
-  ctx.clearRect(0, 0, cw, ch);
+
+  const jobs: { el: Element; tone: Tone }[] = [];
+  for (let i = 0; i < els.length; i++) {
+    let tone = floorTone;
+    for (const flood of floods) if (now >= flood.arr[i]) tone = flood.tone;
+    if (tone && els[i].getAttribute('data-tone') !== tone) jobs.push({ el: els[i], tone });
+  }
+  // First arrivals use the color recorded for the tone still on screen.
+  const live = readLive(jobs);
+  const viewH = viewport().height;
   const rects = new Map<HTMLElement, DOMRect>();
   for (const flood of floods) {
     for (const layer of flood.layers) {
       if (rects.has(layer)) continue;
       const rect = layer.getBoundingClientRect();
-      if (rect.width > 0 && rect.bottom > 0 && rect.top < ch) rects.set(layer, rect);
+      if (rect.width > 0 && rect.bottom > 0 && rect.top < viewH) rects.set(layer, rect);
     }
   }
+
+  fit();
+  ctx.clearRect(0, 0, cw, ch);
   for (const flood of floods) {
     const t = Math.min(1, Math.max(0, (now - flood.start) / duration));
     const pts = blobPoints(flood, t);
@@ -266,21 +458,29 @@ function tick(now: number) {
       if (rect) layer.style.clipPath = clipFor(pts, rect.left, rect.top);
     }
   }
-  for (let i = 0; i < els.length; i++) {
-    let tone = floorTone;
-    for (const flood of floods) if (now >= flood.arr[i]) tone = flood.tone;
-    if (tone && els[i].getAttribute('data-tone') !== tone) paint(els[i], tone);
-  }
+  for (const job of jobs) paint(job.el, job.tone, false, live.get(job.el));
   while (floods.length && now - floods[0].start >= duration) {
     const done = floods.shift();
     if (!done) break;
     floorTone = done.tone;
     root.style.setProperty('--floor', done.color);
-    for (const host of done.hosts) paint(host, done.tone);
+    for (const host of done.hosts) paint(host, done.tone, true);
     for (const layer of done.layers) layer.remove();
   }
-  if (floods.length) raf = requestAnimationFrame(tick);
-  else finish();
+  releaseFinished();
+  if (floods.length) {
+    raf = requestAnimationFrame(tick);
+    return;
+  }
+  if (!tail) {
+    tail = true;
+    ctx.clearRect(0, 0, cw, ch);
+    root.style.removeProperty('--floor');
+    // Tones stay through the fade. Removing them here retargets any color that
+    // is still easing, which reads as a flicker on the elements just reached.
+    cleanupTimer = window.setTimeout(settle, fadeMs + 150);
+  }
+  if (fillsOpen()) raf = requestAnimationFrame(tick);
 }
 
 export function floodTo(origin: Element, commit: (theme: Tone) => void) {
@@ -301,6 +501,7 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
       (el) => !el.closest('[data-flood-host]'),
     );
     duration = ms('--dur-flood', 1200);
+    fadeMs = ms('--dur-flood-fade', 250);
   }
 
   const box = origin.getBoundingClientRect();
@@ -328,12 +529,17 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     // Changing the root color-scheme mid-fade makes Chromium restart every
     // inherited color transition on each frame, so text crawls and icons flicker.
     root.style.setProperty('color-scheme', floorTone);
-    root.classList.add('flooding');
-    // Commit the recorded color before the fade exists, or text eases in from transparent.
-    void root.offsetWidth;
-    root.classList.add('flood-fade');
+    // Pin the color already showing before the theme flips. The fade is armed
+    // after that flip: if it is already on, Chromium eases from the new theme
+    // back to this pinned color.
+    lockColors(floorTone);
   }
   commit(next);
+  if (fresh) {
+    void root.offsetWidth;
+    root.classList.add('flooding');
+    void root.offsetWidth;
+  }
 
   const built = buildLayers(next);
   floods.push({

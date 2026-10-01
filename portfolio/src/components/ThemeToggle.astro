@@ -18,10 +18,8 @@ import Icon from './Icon.astro';
     grid-area: 1 / 1;
     transition: opacity var(--dur-flood-fade) ease;
   }
-  /* --flood-fg is the recorded stroke color. Listing `color` as well fights
-     that fade and cancels it. */
-  :global(html.flooding.flood-fade .theme-toggle svg) {
-    transition: opacity var(--dur-flood-fade) ease, --flood-fg var(--dur-flood-fade) ease;
+  :global(html.flooding .theme-toggle svg) {
+    transition: opacity var(--dur-flood-fade) ease;
   }
   :global(:root[data-theme="dark"] .theme-toggle .icon-moon),
   :global(:root:not([data-theme="dark"]) .theme-toggle .icon-sun) {

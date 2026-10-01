@@ -38,12 +38,12 @@ const { accent, size = 'card', class: className } = Astro.props;
     box-shadow: 0 var(--depth) 0 0 var(--tile-edge);
     transition: transform var(--dur-release) var(--ease-spring), box-shadow var(--dur-release) var(--ease-spring);
   }
-  /* A spring would overshoot the colors, so the splash eases them. */
+  /* Face color eases on its own animation. The shadow cannot run on the
+     compositor, and its geometry shares this ease with hover. */
   :global(html.flooding) .tile {
     transition:
       transform var(--dur-release) var(--ease-spring),
-      box-shadow var(--dur-flood-fade) ease,
-      background-color var(--dur-flood-fade) ease;
+      box-shadow var(--dur-flood-fade) ease;
   }
   .thumb--hero .tile,
   .thumb--portrait .tile {

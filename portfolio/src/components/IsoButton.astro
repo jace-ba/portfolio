@@ -74,6 +74,8 @@ const Tag = href ? 'a' : 'button';
     border-radius: inherit;
     pointer-events: none;
     color: var(--btn-edge);
+    /* The edge color is animated from the splash. A transition here would
+       restart from the original color when the button restyles. */
     box-shadow:
       calc(var(--dx) * 0.125) calc(var(--dy) * 0.125) 0 0 currentColor,
       calc(var(--dx) * 0.25) calc(var(--dy) * 0.25) 0 0 currentColor,
@@ -83,7 +85,6 @@ const Tag = href ? 'a' : 'button';
       calc(var(--dx) * 0.75) calc(var(--dy) * 0.75) 0 0 currentColor,
       calc(var(--dx) * 0.875) calc(var(--dy) * 0.875) 0 0 currentColor,
       var(--dx) var(--dy) 0 0 currentColor;
-    transition: color var(--dur-flood-fade) ease;
   }
 
   .iso-btn {
@@ -128,34 +129,15 @@ const Tag = href ? 'a' : 'button';
     transition: --press var(--dur-press) var(--ease-press);
   }
 
-  /* Keep the press timing, and let the face recolor with the splash.
-     --flood-fg is the recorded text color. Transitioning `color` as well
-     fights it and the fade cancels. flood-fade waits until that color is
-     already showing, so the fade does not start from transparent. */
+  /* Keep the press timing. Face color eases on its own animation, not here,
+     so a press cannot restart it. The extrusion shadow is not transitioned. */
   :global(html.flooding) .iso-btn {
-    transition:
-      --press var(--dur-release) var(--ease-spring),
-      background-color var(--dur-flood-fade) ease;
-  }
-  :global(html.flooding.flood-fade) .iso-btn {
-    transition:
-      --press var(--dur-release) var(--ease-spring),
-      --flood-fg var(--dur-flood-fade) ease,
-      background-color var(--dur-flood-fade) ease;
+    transition: --press var(--dur-release) var(--ease-spring);
   }
 
   :global(html.flooding) .iso-btn:active,
   :global(html.flooding) .iso-btn.is-pressed {
-    transition:
-      --press var(--dur-press) var(--ease-press),
-      background-color var(--dur-flood-fade) ease;
-  }
-  :global(html.flooding.flood-fade) .iso-btn:active,
-  :global(html.flooding.flood-fade) .iso-btn.is-pressed {
-    transition:
-      --press var(--dur-press) var(--ease-press),
-      --flood-fg var(--dur-flood-fade) ease,
-      background-color var(--dur-flood-fade) ease;
+    transition: --press var(--dur-press) var(--ease-press);
   }
 
   .iso-btn:focus-visible {

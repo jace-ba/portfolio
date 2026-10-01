@@ -146,30 +146,26 @@ html.flooding #flood {
   display: block;
 }
 
-/* An inherited color follows its ancestor, so the fade restarts when that
-   ancestor flips. The splash records every element's own text color and
-   writes the one for its current tone into --flood-fg (theme-flood.ts).
-   One variable, registered as a color, so the switch interpolates instead
-   of stepping. Important only while a splash is running. The transition
-   stays in the layer: a component's own transition still wins. */
-@property --flood-fg {
+/* Splash colors are main-thread animations (theme-flood.ts), not transitions.
+   A transition restarts from the original color when an ancestor restyles, and
+   a background transition can be painted a frame late by the compositor.
+   The custom properties start at the color already showing; their transparent
+   initial value is only the registration default. */
+@property --flood-bg {
   syntax: '<color>';
   inherits: false;
   initial-value: transparent;
 }
-
-@layer flood {
-  html.flooding :where(body [data-tone]) {
-    color: var(--flood-fg) !important;
-  }
-  /* Armed a beat after the recorded color is applied. If the transition
-     exists in the same moment the variable is set, it eases in from transparent. */
-  html.flooding.flood-fade :where(body *) {
-    transition:
-      --flood-fg var(--dur-flood-fade) ease,
-      background-color var(--dur-flood-fade) ease,
-      border-color var(--dur-flood-fade) ease;
-  }
+@property --flood-border {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+html.flooding [data-flood-fill] {
+  background-color: var(--flood-bg) !important;
+}
+html.flooding [data-flood-line] {
+  border-color: var(--flood-border) !important;
 }
 
 /* A sliced element keeps its own layer in the old colors. Each splash appends
