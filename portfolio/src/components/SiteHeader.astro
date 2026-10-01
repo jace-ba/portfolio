@@ -7,7 +7,9 @@ import ThemeToggle from './ThemeToggle.astro';
 
 <div class="header-sticky" transition:persist="site-header" transition:animate="none">
   <!-- Page color behind the bar, including the gutters, so content scrolling
-       under the pinned header stays hidden. Sliced with the theme splash. -->
+       under the pinned header stays hidden. Its bottom stops where the bar's
+       corner curve starts, so content stays visible in the cutouts until it
+       passes under the bar. Sliced with the theme splash. -->
   <div class="header-scrim" data-flood-host aria-hidden="true"></div>
   <div class="container header-wrap">
     <header class="site-header">
@@ -39,6 +41,7 @@ import ThemeToggle from './ThemeToggle.astro';
 
 <style>
   .header-sticky {
+    --bar-radius: var(--radius-xl);
     position: sticky;
     top: 0;
     /* Above the page. The skip link sits at 10. */
@@ -56,7 +59,7 @@ import ThemeToggle from './ThemeToggle.astro';
 
   .header-scrim[data-flood-host] {
     position: absolute;
-    inset: 0;
+    inset: 0 0 var(--bar-radius) 0;
     z-index: 0;
   }
 
@@ -82,7 +85,7 @@ import ThemeToggle from './ThemeToggle.astro';
     inset: 0;
     z-index: 0;
     overflow: hidden;
-    border-radius: var(--radius-xl);
+    border-radius: var(--bar-radius);
     pointer-events: none;
   }
 
@@ -148,14 +151,14 @@ import ThemeToggle from './ThemeToggle.astro';
   }
 
   @media (max-width: 860px) {
+    .header-sticky {
+      --bar-radius: var(--radius-lg);
+    }
     .site-header {
       --iso-square-size: 72px;
       grid-template-columns: 1fr auto;
       row-gap: var(--space-4);
       padding: var(--space-4);
-    }
-    .bar {
-      border-radius: var(--radius-lg);
     }
     .actions {
       grid-column: 2;
