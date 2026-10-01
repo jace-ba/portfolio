@@ -5,9 +5,10 @@
 // an ancestor restyles, and a background transition can also be drawn one
 // frame late by the compositor. The nav bar, the logo, and page titles are
 // drawn again inside themselves: the copy is clipped to the same polygon the
-// background canvas fills, so the edge cannot drift, and only that clip
-// changes each frame. Buttons stay whole and keep tilting. A second press
-// before the splash settles pours the other color over the first.
+// background canvas fills, so the edge cannot drift. That clip is rewritten
+// only while the polygon actually cuts the copy. Buttons stay whole and keep
+// tilting. A second press before the splash settles pours the other color
+// over the first.
 
 type Tone = 'light' | 'dark';
 
@@ -24,6 +25,9 @@ type Flood = {
   arr: number[];
   hosts: HTMLElement[];
   layers: HTMLElement[];
+  pts: Float64Array;
+  rIn: number;
+  rOut: number;
 };
 
 const WAVES: [number, number][] = [
@@ -34,6 +38,12 @@ const WAVES: [number, number][] = [
 ];
 const SMOOTHING = 0.75;
 const COUNT = 160;
+/** Glyphs can paint a little outside the border box. The clip test uses this
+    margin so a skipped update cannot shear off ink or reveal any past the wave. */
+const INK = 64;
+/** The covering fill starts once the antialiased fringe is outside the bitmap. */
+const COVER_PAD = 2;
+const EMPTY_CLIP = 'polygon(0px 0px, 0px 0px, 0px 0px)';
 
 const root = document.documentElement;
 const canvas = document.getElementById('flood') as HTMLCanvasElement | null;
@@ -41,6 +51,8 @@ const ctx = canvas?.getContext('2d') ?? null;
 
 let floods: Flood[] = [];
 let els: Element[] = [];
+/** data-tone last written for els[i]. Avoids reading the attribute every frame. */
+let shown: Tone[] = [];
 let recorded: Element[] = [];
 /** Resolved text color in each tone. An animation eases between these. */
 let colors = new Map<Element, Record<Tone, string>>();
@@ -49,6 +61,8 @@ let edges = new Map<Element, Record<Tone, string>>();
 /** Background and border colors, only where the two tones differ. */
 let fills = new Map<Element, Record<Tone, string>>();
 let lines = new Map<Element, Record<Tone, string>>();
+/** --bg for each tone, sampled while colors are recorded. */
+let bgOf: Record<Tone, string> = { light: '', dark: '' };
 /** Inline `color` from before the splash, restored when it settles. */
 let priorColor = new Map<Element, string>();
 /** Elements already handed to an animation. A later splash reads their live color. */
@@ -56,7 +70,7 @@ let arrived = new Set<Element>();
 type FadeKind = 'text' | 'edge' | 'fill' | 'line';
 type Fade = { anim: Animation; el: HTMLElement; kind: FadeKind };
 /** Color animations started by this splash. Nothing here is a CSS transition. */
-let fades: Fade[] = [];
+let fades = new Map<Element, Fade[]>();
 let fadeMs = 250;
 let tail = false;
 let floorTone: Tone | null = null;
@@ -71,6 +85,18 @@ const cover = 1.02 / Math.max(0.3, 1 - ampSum * (1 - SMOOTHING));
 
 const ease = (t: number) => 1 - (1 - t) ** 2.6;
 const easeInv = (x: number) => 1 - (1 - x) ** (1 / 2.6);
+
+const clipParts = new Array<string>(COUNT);
+const lastClip = new WeakMap<HTMLElement, string>();
+/** The clip already on this layer contains every pixel it can paint. */
+const clipHolds = new WeakMap<HTMLElement, boolean>();
+
+type Job = { el: Element; tone: Tone; i: number; rect: DOMRect | null };
+const jobs: Job[] = [];
+let jobCount = 0;
+const hostRects = new Map<HTMLElement, DOMRect>();
+type Live = { text?: string; edge?: string; fill?: string; line?: string };
+const live = new Map<Element, Live>();
 
 function ms(name: string, fallback: number) {
   const raw = getComputedStyle(root).getPropertyValue(name).trim();
@@ -117,19 +143,53 @@ function makeShape(): Wave[] {
 function blobPoints(flood: Flood, t: number) {
   const radius = ease(t) * flood.Rmax;
   const rough = 1 - t * SMOOTHING;
-  const pts = new Array<number>(COUNT * 2);
+  const pts = flood.pts;
+  const { cx, cy, shape } = flood;
   for (let i = 0; i < COUNT; i++) {
     const theta = (i / COUNT) * Math.PI * 2;
     let n = 0;
-    for (const wave of flood.shape) n += wave.a * Math.sin(wave.f * theta + wave.p + wave.s * t);
+    for (const wave of shape) n += wave.a * Math.sin(wave.f * theta + wave.p + wave.s * t);
     const rr = radius * (1 + n * rough);
-    pts[i * 2] = flood.cx + rr * Math.cos(theta);
-    pts[i * 2 + 1] = flood.cy + rr * Math.sin(theta);
+    pts[i * 2] = cx + rr * Math.cos(theta);
+    pts[i * 2 + 1] = cy + rr * Math.sin(theta);
   }
-  return pts;
 }
 
-function drawFlood(color: string, pts: number[]) {
+/** Inscribed and circumscribed radii. The outline is a polar blob, so the
+    center sees every edge and these two numbers bound it exactly. */
+function measure(flood: Flood) {
+  const pts = flood.pts;
+  const cx = flood.cx;
+  const cy = flood.cy;
+  let rOut = 0;
+  let rIn = Infinity;
+  for (let i = 0; i < COUNT; i++) {
+    const ax = pts[i * 2] - cx;
+    const ay = pts[i * 2 + 1] - cy;
+    const r = Math.hypot(ax, ay);
+    if (r > rOut) rOut = r;
+    const j = (i + 1) % COUNT;
+    const bx = pts[j * 2] - cx;
+    const by = pts[j * 2 + 1] - cy;
+    const abx = bx - ax;
+    const aby = by - ay;
+    const ab2 = abx * abx + aby * aby;
+    let along = 0;
+    if (ab2 > 0) {
+      along = -(ax * abx + ay * aby) / ab2;
+      if (along < 0) along = 0;
+      else if (along > 1) along = 1;
+    }
+    const px = ax + abx * along;
+    const py = ay + aby * along;
+    const d = Math.hypot(px, py);
+    if (d < rIn) rIn = d;
+  }
+  flood.rOut = rOut;
+  flood.rIn = rIn;
+}
+
+function drawFlood(color: string, pts: Float64Array) {
   if (!ctx) return;
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -139,14 +199,87 @@ function drawFlood(color: string, pts: number[]) {
   ctx.fill();
 }
 
+function rectInside(
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+  cx: number,
+  cy: number,
+  r: number,
+) {
+  if (r <= 0) return false;
+  const r2 = r * r;
+  const x0 = left - cx;
+  const x1 = right - cx;
+  const y0 = top - cy;
+  const y1 = bottom - cy;
+  return (
+    x0 * x0 + y0 * y0 <= r2 &&
+    x1 * x1 + y0 * y0 <= r2 &&
+    x0 * x0 + y1 * y1 <= r2 &&
+    x1 * x1 + y1 * y1 <= r2
+  );
+}
+
+function rectOutside(
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+  cx: number,
+  cy: number,
+  r: number,
+) {
+  const x = cx < left ? left : cx > right ? right : cx;
+  const y = cy < top ? top : cy > bottom ? bottom : cy;
+  const dx = cx - x;
+  const dy = cy - y;
+  return dx * dx + dy * dy >= r * r;
+}
+
+function coversViewport(flood: Flood) {
+  return rectInside(0, 0, cw, ch, flood.cx, flood.cy, flood.rIn - COVER_PAD);
+}
+
 /** The same outline, in the element's own coordinates. */
-function clipFor(pts: number[], ox: number, oy: number) {
-  let out = 'polygon(';
+function clipFor(pts: Float64Array, ox: number, oy: number) {
   for (let i = 0; i < COUNT; i++) {
-    if (i) out += ',';
-    out += `${(pts[i * 2] - ox).toFixed(1)}px ${(pts[i * 2 + 1] - oy).toFixed(1)}px`;
+    clipParts[i] = `${(pts[i * 2] - ox).toFixed(1)}px ${(pts[i * 2 + 1] - oy).toFixed(1)}px`;
   }
-  return `${out})`;
+  return `polygon(${clipParts.join(',')})`;
+}
+
+function setClip(layer: HTMLElement, value: string) {
+  if (lastClip.get(layer) === value) return;
+  lastClip.set(layer, value);
+  layer.style.clipPath = value;
+}
+
+function updateClip(flood: Flood, layer: HTMLElement) {
+  const host = layer.parentElement;
+  if (!(host instanceof HTMLElement)) return;
+  const rect = hostRects.get(host);
+  if (!rect) return;
+  const left = rect.left - INK;
+  const top = rect.top - INK;
+  const right = rect.right + INK;
+  const bottom = rect.bottom + INK;
+  // Both this polygon and the one already clipped contain the whole copy, so
+  // leaving the clip alone paints the same pixels and skips a style recalc.
+  if (rectInside(left, top, right, bottom, flood.cx, flood.cy, flood.rIn)) {
+    if (!clipHolds.get(layer)) {
+      setClip(layer, clipFor(flood.pts, rect.left, rect.top));
+      clipHolds.set(layer, true);
+    }
+    return;
+  }
+  if (clipHolds.get(layer)) clipHolds.set(layer, false);
+  if (rectOutside(left, top, right, bottom, flood.cx, flood.cy, flood.rOut)) {
+    setClip(layer, EMPTY_CLIP);
+    return;
+  }
+  setClip(layer, clipFor(flood.pts, rect.left, rect.top));
 }
 
 function hosts() {
@@ -164,11 +297,19 @@ function markTitles() {
 }
 
 function buildLayers(tone: Tone) {
+  const visible: HTMLElement[] = [];
+  for (const host of hosts()) {
+    if (host.getBoundingClientRect().width >= 1) visible.push(host);
+  }
   const hostList: HTMLElement[] = [];
   const layers: HTMLElement[] = [];
-  for (const host of hosts()) {
-    if (host.getBoundingClientRect().width < 1) continue;
+  for (const host of visible) {
+    // Earlier copies sit on the host. Parking them keeps cloneNode from
+    // duplicating every splash that is already running.
+    const parked = [...host.querySelectorAll<HTMLElement>(':scope > [data-flood-clone]')];
+    for (const node of parked) node.remove();
     const clone = host.cloneNode(true) as HTMLElement;
+    for (const node of parked) host.append(node);
     clone.querySelectorAll('[data-flood-clone]').forEach((node) => node.remove());
     clone.removeAttribute('data-flood-host');
     clone.removeAttribute('id');
@@ -179,7 +320,9 @@ function buildLayers(tone: Tone) {
     clone.dataset.floodClone = '';
     clone.inert = true;
     clone.setAttribute('aria-hidden', 'true');
-    clone.style.clipPath = 'polygon(0px 0px, 0px 0px, 0px 0px)';
+    clone.style.clipPath = EMPTY_CLIP;
+    lastClip.set(clone, EMPTY_CLIP);
+    clipHolds.set(clone, false);
     host.append(clone);
     hostList.push(host);
     layers.push(clone);
@@ -222,8 +365,10 @@ function recordColors(current: Tone) {
   const toned = [document.body, ...recorded];
   for (const el of toned) el.setAttribute('data-tone', other);
   const flipped = recorded.map(sampleStyle);
+  bgOf[other] = getComputedStyle(document.body).getPropertyValue('--bg').trim();
   const flippedEdge = edged.map((el) => getComputedStyle(el, '::before').color);
   for (const el of toned) el.setAttribute('data-tone', current);
+  bgOf[current] = getComputedStyle(document.body).getPropertyValue('--bg').trim();
   document.body.removeAttribute('data-tone');
   recorded.forEach((el, i) => {
     colors.set(el, { [current]: now[i].color, [other]: flipped[i].color } as Record<Tone, string>);
@@ -252,11 +397,16 @@ function lockColors(tone: Tone) {
 }
 
 function dropFades(el: Element) {
-  fades = fades.filter((fade) => {
-    if (fade.el !== el) return true;
-    fade.anim.cancel();
-    return false;
-  });
+  const list = fades.get(el);
+  if (!list) return;
+  for (const fade of list) fade.anim.cancel();
+  fades.delete(el);
+}
+
+function trackFade(fade: Fade) {
+  const list = fades.get(fade.el);
+  if (list) list.push(fade);
+  else fades.set(fade.el, [fade]);
 }
 
 /** Ease from the color on screen to the destination. A later call continues from the current frame, not the original color. */
@@ -268,18 +418,13 @@ function fadeColor(el: Element, from: string, to: string, pseudoElement?: string
     fill: 'forwards',
     ...(pseudoElement ? { pseudoElement } : {}),
   });
-  fades.push({ anim, el: el as HTMLElement, kind: pseudoElement ? 'edge' : 'text' });
+  trackFade({ anim, el: el as HTMLElement, kind: pseudoElement ? 'edge' : 'text' });
 }
 
 /** A registered custom property, animated on the main thread. The from value is
     written in the same task as the attribute, so the first frame is the color
     already showing and never the property's transparent initial value. */
-function fadePaint(
-  el: HTMLElement,
-  kind: 'fill' | 'line',
-  from: string,
-  to: string,
-) {
+function fadePaint(el: HTMLElement, kind: 'fill' | 'line', from: string, to: string) {
   const prop = kind === 'fill' ? '--flood-bg' : '--flood-border';
   const attr = kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
   if (from === to) {
@@ -291,13 +436,11 @@ function fadePaint(
   el.setAttribute(attr, '');
   const frames: Keyframe[] = [{ [prop]: from }, { [prop]: to }];
   const anim = el.animate(frames, { duration: fadeMs, easing: 'ease', fill: 'forwards' });
-  fades.push({ anim, el, kind });
+  trackFade({ anim, el, kind });
 }
 
-type Live = { text?: string; edge?: string; fill?: string; line?: string };
-
 /** Move this element to the tone now under it. Hosts snap; the clipped copy already shows the destination. */
-function paint(el: Element, tone: Tone, snap = false, live?: Live) {
+function paint(el: Element, tone: Tone, snap = false, sample?: Live) {
   const pair = colors.get(el);
   const edge = edges.get(el);
   const fill = fills.get(el);
@@ -313,38 +456,53 @@ function paint(el: Element, tone: Tone, snap = false, live?: Live) {
     if (pair) node.style.setProperty('color', pair[tone]);
   } else {
     dropFades(el);
-    if (pair) fadeColor(el, live?.text ?? pair[showing], pair[tone]);
-    if (edge) fadeColor(el, live?.edge ?? edge[showing], edge[tone], '::before');
-    if (fill) fadePaint(node, 'fill', live?.fill ?? fill[showing], fill[tone]);
-    if (line) fadePaint(node, 'line', live?.line ?? line[showing], line[tone]);
+    if (pair) fadeColor(el, sample?.text ?? pair[showing], pair[tone]);
+    if (edge) fadeColor(el, sample?.edge ?? edge[showing], edge[tone], '::before');
+    if (fill) fadePaint(node, 'fill', sample?.fill ?? fill[showing], fill[tone]);
+    if (line) fadePaint(node, 'line', sample?.line ?? line[showing], line[tone]);
   }
   if (el.getAttribute('data-tone') !== tone) el.setAttribute('data-tone', tone);
   arrived.add(el);
 }
 
 function stopFades() {
-  for (const fade of fades) fade.anim.cancel();
-  fades = [];
+  for (const list of fades.values()) for (const fade of list) fade.anim.cancel();
+  fades.clear();
 }
 
 /** Hand a finished fill back to the stylesheet. The tone is already the destination, so nothing jumps, and hover works again. */
 function releaseFinished() {
-  fades = fades.filter((fade) => {
-    if (fade.kind !== 'fill' && fade.kind !== 'line') return true;
-    if (fade.anim.playState !== 'finished') return true;
-    const prop = fade.kind === 'fill' ? '--flood-bg' : '--flood-border';
-    const attr = fade.kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
-    fade.el.removeAttribute(attr);
-    fade.el.style.removeProperty(prop);
-    fade.anim.cancel();
-    return false;
-  });
+  for (const [el, list] of fades) {
+    let write = 0;
+    for (let i = 0; i < list.length; i++) {
+      const fade = list[i];
+      if (
+        (fade.kind === 'fill' || fade.kind === 'line') &&
+        fade.anim.playState === 'finished'
+      ) {
+        const prop = fade.kind === 'fill' ? '--flood-bg' : '--flood-border';
+        const attr = fade.kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
+        fade.el.removeAttribute(attr);
+        fade.el.style.removeProperty(prop);
+        fade.anim.cancel();
+        continue;
+      }
+      list[write++] = fade;
+    }
+    list.length = write;
+    if (!write) fades.delete(el);
+  }
 }
 
 function fillsOpen() {
-  return fades.some(
-    (fade) => (fade.kind === 'fill' || fade.kind === 'line') && fade.anim.playState !== 'finished',
-  );
+  for (const list of fades.values()) {
+    for (const fade of list) {
+      if ((fade.kind === 'fill' || fade.kind === 'line') && fade.anim.playState !== 'finished') {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function clearTones() {
@@ -362,17 +520,26 @@ function clearTones() {
     if (!el.getAttribute('style')) el.removeAttribute('style');
   }
   els = [];
+  shown = [];
   recorded = [];
   colors = new Map();
   edges = new Map();
   fills = new Map();
   lines = new Map();
+  bgOf = { light: '', dark: '' };
   priorColor = new Map();
   arrived = new Set();
 }
 
 function removeClones() {
   document.querySelectorAll('[data-flood-clone]').forEach((node) => node.remove());
+}
+
+/** The color still showing beyond the wave. An inline longhand, not an
+    inherited custom property, so the rest of the document is left alone. */
+function setFloor(color: string | null) {
+  if (color) document.body.style.backgroundColor = color;
+  else document.body.style.removeProperty('background-color');
 }
 
 /** Drop the splash immediately. Used when a page swap would detach the elements it is tracking. */
@@ -384,7 +551,7 @@ export function endFlood() {
   floorTone = null;
   removeClones();
   ctx?.clearRect(0, 0, cw, ch);
-  root.style.removeProperty('--floor');
+  setFloor(null);
   settle();
 }
 
@@ -409,61 +576,105 @@ function settle() {
   });
 }
 
-
-/** Colors a second splash has to continue from. Read in one pass, before any write. */
-function readLive(jobs: { el: Element }[]): Map<Element, Live> {
-  const live = new Map<Element, Live>();
-  for (const job of jobs) {
-    if (!arrived.has(job.el)) continue;
+function readLive() {
+  live.clear();
+  for (let i = 0; i < jobCount; i++) {
+    const el = jobs[i].el;
+    if (!arrived.has(el)) continue;
+    const style = getComputedStyle(el);
     const sample: Live = {};
-    if (colors.has(job.el)) sample.text = getComputedStyle(job.el).color;
-    if (edges.has(job.el)) sample.edge = getComputedStyle(job.el, '::before').color;
-    if (fills.has(job.el)) sample.fill = getComputedStyle(job.el).backgroundColor;
-    if (lines.has(job.el)) sample.line = getComputedStyle(job.el).borderTopColor;
-    live.set(job.el, sample);
+    if (colors.has(el)) sample.text = style.color;
+    if (fills.has(el)) sample.fill = style.backgroundColor;
+    if (lines.has(el)) sample.line = style.borderTopColor;
+    if (edges.has(el)) sample.edge = getComputedStyle(el, '::before').color;
+    live.set(el, sample);
   }
-  return live;
 }
+
+function offscreen(rect: DOMRect, viewW: number, viewH: number) {
+  return (
+    rect.bottom < -INK ||
+    rect.top > viewH + INK ||
+    rect.right < -INK ||
+    rect.left > viewW + INK
+  );
+}
+
 
 function tick(now: number) {
   raf = 0;
   if (!ctx) return;
 
-  const jobs: { el: Element; tone: Tone }[] = [];
+  jobCount = 0;
   for (let i = 0; i < els.length; i++) {
     let tone = floorTone;
     for (const flood of floods) if (now >= flood.arr[i]) tone = flood.tone;
-    if (tone && els[i].getAttribute('data-tone') !== tone) jobs.push({ el: els[i], tone });
+    if (tone && shown[i] !== tone) {
+      let job = jobs[jobCount];
+      if (!job) {
+        job = { el: els[i], tone, i, rect: null };
+        jobs[jobCount] = job;
+      } else {
+        job.el = els[i];
+        job.tone = tone;
+        job.i = i;
+        job.rect = null;
+      }
+      jobCount++;
+    }
   }
-  // First arrivals use the color recorded for the tone still on screen.
-  const live = readLive(jobs);
-  const viewH = viewport().height;
-  const rects = new Map<HTMLElement, DOMRect>();
+  // Styles first, then every rect, then writes. One recalc and one layout.
+  readLive();
+  for (let i = 0; i < jobCount; i++) jobs[i].rect = jobs[i].el.getBoundingClientRect();
+
+  const view = viewport();
+  hostRects.clear();
   for (const flood of floods) {
     for (const layer of flood.layers) {
-      if (rects.has(layer)) continue;
+      const host = layer.parentElement;
+      if (!(host instanceof HTMLElement) || hostRects.has(host)) continue;
       const rect = layer.getBoundingClientRect();
-      if (rect.width > 0 && rect.bottom > 0 && rect.top < viewH) rects.set(layer, rect);
+      if (rect.width > 0 && rect.bottom > 0 && rect.top < view.height) hostRects.set(host, rect);
     }
   }
 
-  fit();
-  ctx.clearRect(0, 0, cw, ch);
   for (const flood of floods) {
     const t = Math.min(1, Math.max(0, (now - flood.start) / duration));
-    const pts = blobPoints(flood, t);
-    drawFlood(flood.color, pts);
-    for (const layer of flood.layers) {
-      const rect = rects.get(layer);
-      if (rect) layer.style.clipPath = clipFor(pts, rect.left, rect.top);
+    blobPoints(flood, t);
+    measure(flood);
+  }
+
+  fit();
+  let base = -1;
+  for (let i = floods.length - 1; i >= 0; i--) {
+    if (coversViewport(floods[i])) {
+      base = i;
+      break;
     }
   }
-  for (const job of jobs) paint(job.el, job.tone, false, live.get(job.el));
+  if (base >= 0) {
+    ctx.fillStyle = floods[base].color;
+    ctx.fillRect(0, 0, cw, ch);
+    for (let i = base + 1; i < floods.length; i++) drawFlood(floods[i].color, floods[i].pts);
+  } else {
+    ctx.clearRect(0, 0, cw, ch);
+    for (const flood of floods) drawFlood(flood.color, flood.pts);
+  }
+  for (const flood of floods) {
+    for (const layer of flood.layers) updateClip(flood, layer);
+  }
+
+  for (let i = 0; i < jobCount; i++) {
+    const job = jobs[i];
+    const hidden = job.rect ? offscreen(job.rect, view.width, view.height) : false;
+    paint(job.el, job.tone, hidden, hidden ? undefined : live.get(job.el));
+    shown[job.i] = job.tone;
+  }
   while (floods.length && now - floods[0].start >= duration) {
     const done = floods.shift();
     if (!done) break;
     floorTone = done.tone;
-    root.style.setProperty('--floor', done.color);
+    setFloor(done.color);
     for (const host of done.hosts) paint(host, done.tone, true);
     for (const layer of done.layers) layer.remove();
   }
@@ -475,7 +686,7 @@ function tick(now: number) {
   if (!tail) {
     tail = true;
     ctx.clearRect(0, 0, cw, ch);
-    root.style.removeProperty('--floor');
+    setFloor(null);
     // Tones stay through the fade. Removing them here retargets any color that
     // is still easing, which reads as a flicker on the elements just reached.
     cleanupTimer = window.setTimeout(settle, fadeMs + 150);
@@ -497,7 +708,7 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     // Colors are recorded below with no flood transitions running.
     settle();
     markTitles();
-    els = [...document.body.querySelectorAll('*:not(#flood)')].filter(
+    els = [...document.body.querySelectorAll<Element>('*:not(#flood)')].filter(
       (el) => !el.closest('[data-flood-host]'),
     );
     duration = ms('--dur-flood', 1200);
@@ -522,10 +733,9 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   fit();
   if (fresh) {
     floorTone = root.dataset.theme === 'dark' ? 'dark' : 'light';
-    if (oldBg) root.style.setProperty('--floor', oldBg);
+    if (oldBg) setFloor(oldBg);
     recordColors(floorTone);
-    for (const el of els) el.setAttribute('data-tone', floorTone);
-    for (const host of hosts()) host.setAttribute('data-tone', floorTone);
+    shown = new Array<Tone>(els.length).fill(floorTone);
     // Changing the root color-scheme mid-fade makes Chromium restart every
     // inherited color transition on each frame, so text crawls and icons flicker.
     root.style.setProperty('color-scheme', floorTone);
@@ -542,9 +752,11 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   }
 
   const built = buildLayers(next);
+  const color =
+    bgOf[next] || getComputedStyle(root).getPropertyValue('--bg').trim();
   floods.push({
     tone: next,
-    color: getComputedStyle(root).getPropertyValue('--bg').trim(),
+    color,
     cx,
     cy,
     Rmax,
@@ -553,6 +765,9 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     arr,
     hosts: built.hosts,
     layers: built.layers,
+    pts: new Float64Array(COUNT * 2),
+    rIn: 0,
+    rOut: 0,
   });
   if (!raf) raf = requestAnimationFrame(tick);
 }
