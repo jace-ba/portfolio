@@ -72,8 +72,18 @@ import ThemeToggle from './ThemeToggle.astro';
       }
     };
 
+    const showNav = () => {
+      setHidden(false);
+      anchor = scrollY;
+    };
+
     addEventListener('scroll', () => (frame ||= requestAnimationFrame(update)), { passive: true });
-    twoRow.addEventListener('change', update);
+    // Entering the two-row layout shows the nav. The bar growing taller can
+    // nudge the scroll position, so show it again once that settles.
+    twoRow.addEventListener('change', () => {
+      showNav();
+      requestAnimationFrame(showNav);
+    });
     // Keyboard focus only: a tap focuses the button on some browsers.
     sticky.addEventListener('focusin', (e) => {
       if ((e.target as Element).matches(':focus-visible')) setHidden(false);
@@ -287,6 +297,26 @@ import ThemeToggle from './ThemeToggle.astro';
         opacity var(--dur-release) var(--ease-press),
         transform var(--dur-release) var(--ease-press),
         visibility 0s linear var(--dur-release);
+    }
+  }
+
+  /* A mouse over the bar brings the nav back. Touch screens have no hover. */
+  @media (max-width: 864px) and (hover: hover) and (pointer: fine) {
+    .header-sticky[data-nav-hidden] .bar {
+      pointer-events: auto;
+    }
+    .header-sticky[data-nav-hidden]:hover {
+      --nav-collapse: 0px;
+    }
+    .header-sticky[data-nav-hidden]:hover .site-header :global(.site-nav) {
+      opacity: 1;
+      transform: none;
+      visibility: visible;
+      pointer-events: auto;
+      transition:
+        opacity var(--dur-release) var(--ease-press),
+        transform var(--dur-release) var(--ease-press),
+        visibility 0s linear 0s;
     }
   }
 
