@@ -39,9 +39,61 @@ import ThemeToggle from './ThemeToggle.astro';
   </div>
 </div>
 
+<script>
+  // Two-row layouts only: hide the nav row while scrolling down, show it on the way back up.
+  const sticky = document.querySelector<HTMLElement>('.header-sticky');
+  const nav = sticky?.querySelector<HTMLElement>('.site-nav');
+  // Must match the two-row media query in the styles below.
+  const twoRow = matchMedia('(max-width: 849px)');
+  const THRESHOLD = 8;
+
+  if (sticky && nav) {
+    let anchor = scrollY;
+    let frame = 0;
+
+    const setHidden = (hidden: boolean) => sticky.toggleAttribute('data-nav-hidden', hidden);
+
+    const update = () => {
+      frame = 0;
+      const y = scrollY;
+      const hidden = sticky.hasAttribute('data-nav-hidden');
+      if (!twoRow.matches || y < sticky.offsetHeight || sticky.querySelector(':focus-visible')) {
+        setHidden(false);
+        anchor = y;
+      } else if (y - anchor > THRESHOLD) {
+        setHidden(true);
+        anchor = y;
+      } else if (anchor - y > THRESHOLD) {
+        setHidden(false);
+        anchor = y;
+      } else if (hidden ? y > anchor : y < anchor) {
+        // Track the turning point, so the threshold counts from where the direction changed.
+        anchor = y;
+      }
+    };
+
+    addEventListener('scroll', () => (frame ||= requestAnimationFrame(update)), { passive: true });
+    twoRow.addEventListener('change', update);
+    // Keyboard focus only: a tap focuses the button on some browsers.
+    sticky.addEventListener('focusin', (e) => {
+      if ((e.target as Element).matches(':focus-visible')) setHidden(false);
+    });
+    document.addEventListener('astro:after-swap', () => {
+      setHidden(false);
+      anchor = scrollY;
+    });
+
+    new ResizeObserver(() => {
+      sticky.style.setProperty('--nav-row-h', `${nav.offsetHeight}px`);
+    }).observe(nav);
+  }
+</script>
+
 <style>
   .header-sticky {
     --bar-radius: var(--radius-xl);
+    /* How far the bar's bottom edge rises while the nav row is hidden. */
+    --nav-collapse: 0px;
     position: sticky;
     top: 0;
     /* Above the page. The skip link sits at 10. */
@@ -59,30 +111,34 @@ import ThemeToggle from './ThemeToggle.astro';
 
   .header-scrim[data-flood-host] {
     position: absolute;
-    inset: 0 0 var(--bar-radius) 0;
+    inset: 0 0 calc(var(--bar-radius) + var(--nav-collapse)) 0;
     z-index: 0;
+    transition: bottom var(--dur-release) var(--ease-press);
   }
 
   .header-wrap {
     position: relative;
     z-index: 1;
+    container-type: inline-size;
     padding-top: var(--space-5);
   }
 
   .site-header {
+    --hdr-gap: var(--space-5);
     position: relative;
     isolation: isolate;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    column-gap: var(--space-5);
+    column-gap: var(--hdr-gap);
     padding: var(--space-5);
   }
 
   /* The painted cell. Buttons stay outside it and keep tilting. */
   .bar {
     position: absolute;
-    inset: 0;
+    inset: 0 0 var(--nav-collapse) 0;
+    transition: bottom var(--dur-release) var(--ease-press);
     z-index: 0;
     overflow: hidden;
     border-radius: var(--bar-radius);
@@ -106,16 +162,22 @@ import ThemeToggle from './ThemeToggle.astro';
     position: relative;
     z-index: 1;
     justify-self: center;
+    transition:
+      opacity var(--dur-release) var(--ease-press),
+      transform var(--dur-release) var(--ease-press),
+      visibility 0s linear 0s;
   }
 
   .brand {
+    --brand-pad: 12px;
+    --brand-size: 19px;
     position: relative;
     z-index: 1;
     justify-self: start;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-inline: 12px;
+    padding-inline: var(--brand-pad);
     font-family: var(--font-display);
     font-weight: 700;
     color: var(--ink);
@@ -125,12 +187,12 @@ import ThemeToggle from './ThemeToggle.astro';
   }
 
   .brand-given {
-    font-size: 62.5px;
+    font-size: calc(var(--brand-size) * 62.5 / 19);
     line-height: 0.88;
   }
 
   .brand-family {
-    font-size: 19px;
+    font-size: var(--brand-size);
     line-height: 1.2;
     white-space: nowrap;
   }
@@ -150,48 +212,134 @@ import ThemeToggle from './ThemeToggle.astro';
     gap: var(--space-3);
   }
 
-  @media (max-width: 860px) {
+  /* Still one row: the nav centers between the name and the buttons instead
+     of on the bar, and the name gives up width before anything wraps. */
+  @media (min-width: 850px) and (max-width: 949px) {
+    .site-header {
+      /* Measured full-size widths of the nav and of the résumé and theme
+         group; update them if those labels change. */
+      --nav-w: 329px;
+      --actions-w: 228px;
+      --hdr-gap: var(--space-4);
+      grid-template-columns: auto 1fr auto;
+      padding: var(--space-4);
+    }
+    /* "BAPTISTA-ALLAN" is about 8.84em wide. */
+    .brand {
+      --brand-size: clamp(
+        14px,
+        (100cqi - 2 * var(--space-4) - 2 * var(--hdr-gap) - var(--nav-w) - var(--actions-w) - 2 * var(--brand-pad)) / 8.84,
+        19px
+      );
+    }
+  }
+
+  /* Below this the single row no longer fits, so the nav drops to its own
+     row. The name and the résumé/theme pair stay a centered group instead of
+     stretching to opposite ends of the bar. The nav row hides while scrolling
+     down. */
+  @media (max-width: 849px) {
     .header-sticky {
       --bar-radius: var(--radius-lg);
+      --hdr-row-gap: var(--space-3);
+    }
+    .header-wrap {
+      padding-top: var(--space-3);
     }
     .site-header {
-      --iso-square-size: 72px;
-      grid-template-columns: 1fr auto;
-      row-gap: var(--space-4);
-      padding: var(--space-4);
+      --hdr-gap: var(--space-5);
+      grid-template-columns: auto auto;
+      justify-content: center;
+      row-gap: var(--hdr-row-gap);
+      padding: var(--space-4) var(--space-6);
+    }
+    .brand {
+      grid-column: 1;
+      grid-row: 1;
+      justify-self: end;
     }
     .actions {
       grid-column: 2;
       grid-row: 1;
+      justify-self: start;
     }
     .site-header :global(.site-nav) {
       grid-column: 1 / -1;
       grid-row: 2;
     }
+
+    .header-sticky[data-nav-hidden] {
+      --nav-collapse: calc(var(--nav-row-h, 0px) + var(--hdr-row-gap));
+      pointer-events: none;
+    }
+    .header-sticky[data-nav-hidden] .brand,
+    .header-sticky[data-nav-hidden] .actions {
+      pointer-events: auto;
+    }
+    .header-sticky[data-nav-hidden] .site-header :global(.site-nav) {
+      opacity: 0;
+      transform: translateY(calc(-0.5 * var(--nav-collapse)));
+      visibility: hidden;
+      transition:
+        opacity var(--dur-release) var(--ease-press),
+        transform var(--dur-release) var(--ease-press),
+        visibility 0s linear var(--dur-release);
+    }
   }
 
-  /* The pill is wider than the square it replaced, so pull the row in
-     until the name, résumé, and theme toggle fit side by side. */
+  @media (max-width: 849px) and (prefers-reduced-motion: reduce) {
+    .header-sticky[data-nav-hidden] .site-header :global(.site-nav) {
+      transition-delay: 0s;
+    }
+  }
+
+  /* Phones: more space inside and outside the bar. Nav squares shrink only
+     when they have to, so the rows keep that padding. The name scales to the
+     room beside the résumé and theme buttons. */
   @media (max-width: 560px) {
+    .header-wrap {
+      padding-top: var(--space-3);
+      padding-inline: var(--space-4);
+    }
     .site-header {
-      --pill-pad-inline: 0.85rem;
-      column-gap: var(--space-3);
-      padding: var(--space-3);
+      /* Horizontal padding of one iso-hole: 0.75 * --iso-depth on each side. */
+      --hole-x: calc(var(--iso-depth) * 1.5);
+      --nav-gap: var(--space-2);
+      --hdr-pad: var(--space-5);
+      --hdr-gap: var(--space-3);
+      /* "BAPTISTA-ALLAN" is about 8.84em wide. --actions-w is the measured
+         width of the résumé and theme group; update it if that label changes. */
+      --actions-w: 200px;
+      --pill-pad-inline: 0.75rem;
+      --iso-square-size: clamp(
+        64px,
+        (100cqi - 2 * var(--hdr-pad) - 3 * var(--hole-x) - 2 * var(--nav-gap)) / 3,
+        88px
+      );
+      padding: var(--space-4) var(--hdr-pad);
     }
     .brand {
-      padding-inline: 0;
+      --brand-pad: 0px;
+      --brand-size: clamp(
+        10px,
+        (100cqi - 2 * var(--hdr-pad) - var(--hdr-gap) - var(--actions-w)) / 8.84,
+        19px
+      );
     }
-    .actions {
-      gap: var(--space-2);
+    .actions,
+    .site-header :global(.site-nav) {
+      gap: var(--nav-gap);
     }
   }
 
-  @media (max-width: 480px) {
-    .brand-given {
-      font-size: 40px;
+  /* The résumé icon comes off so the name can stay readable while the bar
+     padding holds at the narrowest widths. */
+  @media (max-width: 380px) {
+    .site-header {
+      --actions-w: 170px;
     }
-    .brand-family {
-      font-size: 13px;
+    .site-header :global(.resume-link svg) {
+      display: none;
     }
   }
 </style>
