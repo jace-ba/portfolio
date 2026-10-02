@@ -44,7 +44,7 @@ import ThemeToggle from './ThemeToggle.astro';
   const sticky = document.querySelector<HTMLElement>('.header-sticky');
   const nav = sticky?.querySelector<HTMLElement>('.site-nav');
   // Must match the two-row media query in the styles below.
-  const twoRow = matchMedia('(max-width: 864px)');
+  const twoRow = matchMedia('(max-width: 842px)');
   const THRESHOLD = 8;
 
   if (sticky && nav) {
@@ -228,8 +228,8 @@ import ThemeToggle from './ThemeToggle.astro';
   /* Still the wide single row: same padding, same gaps, nav on the center
      of the bar. The name shrinks once the résumé and theme buttons have used
      up the space on the right and start pushing the nav left. The two-row
-     query below overrides this from 864px down, where the name would otherwise
-     drop under 14px and the résumé would run into the bar's padding. */
+     query below takes over at 842px, one pixel under a half-screen window
+     (843px viewport on a 2560×1600 display at 150%). */
   @media (max-width: 949px) {
     .site-header {
       /* Measured full-size widths of the nav and of the résumé and theme
@@ -237,21 +237,23 @@ import ThemeToggle from './ThemeToggle.astro';
       --nav-w: 329px;
       --actions-w: 228px;
     }
-    /* "BAPTISTA-ALLAN" is about 8.84em wide. */
+    /* "BAPTISTA-ALLAN" is about 8.84em wide. The floor sits under the size
+       this formula yields at 843px, so the name keeps shrinking through the
+       whole one-row range and the bar padding does not give way. */
     .brand {
       --brand-size: clamp(
-        14px,
+        13px,
         (100cqi - 2 * var(--space-5) - 2 * var(--hdr-gap) - var(--nav-w) - var(--actions-w) - 2 * var(--brand-pad)) / 8.84,
         19px
       );
     }
   }
 
-  /* Below this the single row no longer fits, so the nav drops to its own
-     row. The name and the résumé/theme pair stay a centered group instead of
+  /* Narrower than a half-screen window, the nav drops to its own row. The
+     name and the résumé/theme pair stay a centered group instead of
      stretching to opposite ends of the bar. The nav row hides while scrolling
      down. */
-  @media (max-width: 864px) {
+  @media (max-width: 842px) {
     .header-sticky {
       --bar-radius: var(--radius-lg);
       --hdr-row-gap: var(--space-3);
@@ -304,7 +306,7 @@ import ThemeToggle from './ThemeToggle.astro';
   }
 
   /* A mouse over the bar brings the nav back. Touch screens have no hover. */
-  @media (max-width: 864px) and (hover: hover) and (pointer: fine) {
+  @media (max-width: 842px) and (hover: hover) and (pointer: fine) {
     .header-sticky[data-nav-hidden] .bar {
       pointer-events: auto;
     }
@@ -323,7 +325,7 @@ import ThemeToggle from './ThemeToggle.astro';
     }
   }
 
-  @media (max-width: 864px) and (prefers-reduced-motion: reduce) {
+  @media (max-width: 842px) and (prefers-reduced-motion: reduce) {
     .header-sticky[data-nav-hidden] .site-header :global(.site-nav) {
       transition-delay: 0s;
     }
