@@ -3,26 +3,37 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import IsoButton from '../components/IsoButton.astro';
 import IsoTile from '../components/IsoTile.astro';
 import Icon from '../components/Icon.astro';
+import Placeholder from '../components/Placeholder.astro';
 ---
 
-<BaseLayout title="About" description="About Jace Baptista-Allan.">
+<BaseLayout
+  title="About"
+  description="Jace Baptista-Allan is a Computer Science and Physics student at the University of Washington, applying computation to physical and real-world problems."
+>
   <div class="page">
     <section class="bio-row">
       <IsoTile accent="azure" size="portrait" class="portrait" />
       <div class="intro">
         <p class="eyebrow">About</p>
         <h1>Jace Baptista-Allan</h1>
+        <p class="role">
+          Computer Science and Physics student at the University of Washington, applying computation to
+          physical and real-world problems.
+        </p>
+        <Placeholder label="Personal intro" />
       </div>
     </section>
 
-    <section class="section" aria-labelledby="skills">
-      <h2 id="skills">What I work with</h2>
-      <div class="skills"></div>
-    </section>
-
-    <section class="section experience" aria-labelledby="experience">
-      <h2 id="experience">Experience</h2>
-      <ol class="jobs"></ol>
+    <section class="section" aria-labelledby="now">
+      <h2 id="now">Right now</h2>
+      <div class="now">
+        <h3>Software developer, Novel Observations in Mixed Reality</h3>
+        <p class="org">UW Department of Physics</p>
+        <p>
+          Building interactive VR physics simulations in C# and Unity for undergraduate laboratories.
+          The software is used in introductory and advanced physics courses at UW and WSU.
+        </p>
+      </div>
     </section>
 
     <section class="panel contact" aria-labelledby="contact">
@@ -31,6 +42,10 @@ import Icon from '../components/Icon.astro';
         <IsoButton href="mailto:jacedba@gmail.com" variant="azure">
           <Icon name="mail" />
           Email me
+        </IsoButton>
+        <IsoButton href="https://www.linkedin.com/in/jacedba/" target="_blank" rel="noopener noreferrer">
+          <Icon name="external" />
+          LinkedIn
         </IsoButton>
         <IsoButton href="/resume.pdf" download>
           <Icon name="download" />
@@ -49,38 +64,23 @@ import Icon from '../components/Icon.astro';
     align-items: center;
   }
 
-  .skills {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: var(--space-3);
+  .role {
+    font-size: var(--text-lg);
+    max-width: 28em;
   }
 
-  .experience {
-    gap: var(--space-3);
+  .now {
+    display: grid;
+    gap: var(--space-2);
+    max-width: 42em;
   }
 
-  .jobs {
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  .now h3 {
+    font-size: var(--text-lg);
   }
-  .jobs li {
-    display: grid;
-    grid-template-columns: 160px 1fr;
-    gap: var(--space-5);
-    padding-block: var(--space-4);
-    border-top: 1px solid var(--line);
-  }
-  .jobs h3 {
-    margin-bottom: var(--space-1);
-  }
-  .jobs p,
-  .when {
+
+  .org {
     color: var(--muted);
-  }
-  .when {
-    font-size: var(--text-sm);
-    padding-top: 0.2em;
   }
 
   .contact {
@@ -101,10 +101,6 @@ import Icon from '../components/Icon.astro';
   }
 
   @media (max-width: 600px) {
-    .jobs li {
-      grid-template-columns: 1fr;
-      gap: var(--space-2);
-    }
     .contact {
       padding: var(--space-6);
     }
