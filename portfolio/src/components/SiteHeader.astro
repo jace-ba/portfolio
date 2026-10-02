@@ -44,7 +44,7 @@ import ThemeToggle from './ThemeToggle.astro';
   const sticky = document.querySelector<HTMLElement>('.header-sticky');
   const nav = sticky?.querySelector<HTMLElement>('.site-nav');
   // Must match the two-row media query in the styles below.
-  const twoRow = matchMedia('(max-width: 849px)');
+  const twoRow = matchMedia('(max-width: 864px)');
   const THRESHOLD = 8;
 
   if (sticky && nav) {
@@ -212,23 +212,23 @@ import ThemeToggle from './ThemeToggle.astro';
     gap: var(--space-3);
   }
 
-  /* Still one row: the nav centers between the name and the buttons instead
-     of on the bar, and the name gives up width before anything wraps. */
-  @media (min-width: 850px) and (max-width: 949px) {
+  /* Still the wide single row: same padding, same gaps, nav on the center
+     of the bar. The name shrinks once the résumé and theme buttons have used
+     up the space on the right and start pushing the nav left. The two-row
+     query below overrides this from 864px down, where the name would otherwise
+     drop under 14px and the résumé would run into the bar's padding. */
+  @media (max-width: 949px) {
     .site-header {
       /* Measured full-size widths of the nav and of the résumé and theme
          group; update them if those labels change. */
       --nav-w: 329px;
       --actions-w: 228px;
-      --hdr-gap: var(--space-4);
-      grid-template-columns: auto 1fr auto;
-      padding: var(--space-4);
     }
     /* "BAPTISTA-ALLAN" is about 8.84em wide. */
     .brand {
       --brand-size: clamp(
         14px,
-        (100cqi - 2 * var(--space-4) - 2 * var(--hdr-gap) - var(--nav-w) - var(--actions-w) - 2 * var(--brand-pad)) / 8.84,
+        (100cqi - 2 * var(--space-5) - 2 * var(--hdr-gap) - var(--nav-w) - var(--actions-w) - 2 * var(--brand-pad)) / 8.84,
         19px
       );
     }
@@ -238,7 +238,7 @@ import ThemeToggle from './ThemeToggle.astro';
      row. The name and the résumé/theme pair stay a centered group instead of
      stretching to opposite ends of the bar. The nav row hides while scrolling
      down. */
-  @media (max-width: 849px) {
+  @media (max-width: 864px) {
     .header-sticky {
       --bar-radius: var(--radius-lg);
       --hdr-row-gap: var(--space-3);
@@ -254,6 +254,9 @@ import ThemeToggle from './ThemeToggle.astro';
       padding: var(--space-4) var(--space-6);
     }
     .brand {
+      /* A step down from the 19px single-row wordmark, so the name sits
+         with the résumé and theme buttons instead of towering over them. */
+      --brand-size: 16px;
       grid-column: 1;
       grid-row: 1;
       justify-self: end;
@@ -287,7 +290,7 @@ import ThemeToggle from './ThemeToggle.astro';
     }
   }
 
-  @media (max-width: 849px) and (prefers-reduced-motion: reduce) {
+  @media (max-width: 864px) and (prefers-reduced-motion: reduce) {
     .header-sticky[data-nav-hidden] .site-header :global(.site-nav) {
       transition-delay: 0s;
     }
@@ -323,7 +326,7 @@ import ThemeToggle from './ThemeToggle.astro';
       --brand-size: clamp(
         10px,
         (100cqi - 2 * var(--hdr-pad) - var(--hdr-gap) - var(--actions-w)) / 8.84,
-        19px
+        16px
       );
     }
     .actions,
