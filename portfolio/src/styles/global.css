@@ -63,7 +63,10 @@ a {
   width: 100%;
   max-width: var(--content-width);
   margin-inline: auto;
-  padding-inline: var(--space-5);
+  /* In landscape the camera cutout is on one side. Keep at least the usual
+     gutter, and more where the screen isn't safe to draw on. */
+  padding-left: max(var(--space-5), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--space-5), env(safe-area-inset-right, 0px));
 }
 
 .page {
