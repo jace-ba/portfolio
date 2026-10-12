@@ -46,12 +46,6 @@ const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
     <main id="main" class="container">
       <slot />
     </main>
-    <footer class="container">
-      <div class="site-footer">
-        <p>© {new Date().getFullYear()} Jace</p>
-        <a href="mailto:jacedba@gmail.com">jacedba@gmail.com</a>
-      </div>
-    </footer>
   </body>
 </html>
 
@@ -73,17 +67,6 @@ const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
       opacity: 0;
       transform: translateY(6px);
     }
-  }
-
-  .site-footer {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-    padding-block: var(--space-6) var(--space-7);
-    border-top: 1px solid var(--line);
-    font-size: var(--text-sm);
-    color: var(--muted);
   }
 
   .skip-link {

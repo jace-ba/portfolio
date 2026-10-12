@@ -50,6 +50,13 @@
   --gold-ink: #8c6800;
 
   --neutral-edge: color-mix(in oklch, var(--neutral) 76%, black);
+
+  /* Current-page dot. The face is too close to this bar, so the dot uses the edge. */
+  --azure-mark: var(--azure-edge);
+  --scarlet-mark: var(--scarlet-edge);
+  --tangerine-mark: var(--tangerine-edge);
+  --gold-mark: var(--gold-edge);
+  --neutral-mark: var(--neutral-edge);
 }
 
 :root[data-theme="dark"],
@@ -81,6 +88,13 @@
   --scarlet-ink: #fb6b66;
   --tangerine-ink: var(--tangerine);
   --gold-ink: var(--gold);
+
+  /* The face already clears this bar, so the dot matches the button. */
+  --azure-mark: var(--azure);
+  --scarlet-mark: var(--scarlet);
+  --tangerine-mark: var(--tangerine);
+  --gold-mark: var(--gold);
+  --neutral-mark: var(--neutral-edge);
 }
 
 :root,

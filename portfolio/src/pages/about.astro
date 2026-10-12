@@ -1,9 +1,17 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import IsoButton from '../components/IsoButton.astro';
-import IsoTile from '../components/IsoTile.astro';
 import Icon from '../components/Icon.astro';
 import Placeholder from '../components/Placeholder.astro';
+import QuoteOfTheWeek from '../components/QuoteOfTheWeek.astro';
+import profilePhoto from '../assets/profile-photo.jpg';
+
+const openTo = [
+  { label: 'Roles', value: 'Systems, ML and computer vision, simulation, software engineering' },
+  { label: 'Timing', value: 'Spring or summer 2027 internships; full-time from June 2028' },
+  { label: 'Location', value: 'Seattle; open to remote and relocation' },
+];
 ---
 
 <BaseLayout
@@ -12,32 +20,59 @@ import Placeholder from '../components/Placeholder.astro';
 >
   <div class="page">
     <section class="bio-row">
-      <IsoTile accent="azure" size="portrait" class="portrait" />
+      <Image
+        src={profilePhoto}
+        alt="Jace with Dubs, the University of Washington husky mascot"
+        widths={[360, 720]}
+        sizes="(max-width: 800px) 100vw, 360px"
+        class="portrait"
+        loading="eager"
+      />
       <div class="intro">
-        <p class="eyebrow">About</p>
         <h1>Jace Baptista-Allan</h1>
         <p class="role">
-          Computer Science and Physics student at the University of Washington, applying computation to
-          physical and real-world problems.
+          Computer Science and Physics student at the University of Washington
         </p>
-        <Placeholder label="Personal intro" />
+        <Placeholder label="Intro, 40–60 words" />
       </div>
     </section>
 
-    <section class="section" aria-labelledby="now">
-      <h2 id="now">Right now</h2>
+    <section class="section" aria-labelledby="origin">
+      <h2 id="origin">How I got here</h2>
+      <Placeholder label="How I got here, 80–110 words" />
+    </section>
+
+    <section class="section" aria-labelledby="work">
+      <h2 id="work">How I work</h2>
+      <Placeholder label="How I work, 60–80 words" />
       <div class="now">
+        <p class="eyebrow">Right now</p>
         <h3>Software developer, Novel Observations in Mixed Reality</h3>
         <p class="org">UW Department of Physics</p>
-        <p>
-          Building interactive VR physics simulations in C# and Unity for undergraduate laboratories.
-          The software is used in introductory and advanced physics courses at UW and WSU.
-        </p>
+        <a href="/projects/vr-physics-labs">See the VR physics labs</a>
       </div>
     </section>
+
+    <section class="section" aria-labelledby="outside">
+      <h2 id="outside">Outside the lab</h2>
+      <Placeholder label="Outside the lab, 40–60 words" />
+      <a href="/projects#smaller-builds">Smaller things I’ve built</a>
+    </section>
+
+    <QuoteOfTheWeek />
 
     <section class="panel contact" aria-labelledby="contact">
       <h2 id="contact">Contact</h2>
+      <dl class="facts">
+        {
+          openTo.map(({ label, value }) => (
+            <div class="fact">
+              <dt class="eyebrow">{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))
+        }
+      </dl>
       <div class="button-row">
         <IsoButton href="mailto:jacedba@gmail.com" variant="azure">
           <Icon name="mail" />
@@ -46,10 +81,6 @@ import Placeholder from '../components/Placeholder.astro';
         <IsoButton href="https://www.linkedin.com/in/jacedba/" target="_blank" rel="noopener noreferrer">
           <Icon name="external" />
           LinkedIn
-        </IsoButton>
-        <IsoButton href="/resume.pdf" download>
-          <Icon name="download" />
-          Download résumé
         </IsoButton>
       </div>
     </section>
@@ -64,6 +95,14 @@ import Placeholder from '../components/Placeholder.astro';
     align-items: center;
   }
 
+  .bio-row :global(.portrait) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 6 / 7;
+    object-fit: cover;
+    border-radius: var(--radius-xl);
+  }
+
   .role {
     font-size: var(--text-lg);
     max-width: 28em;
@@ -72,6 +111,7 @@ import Placeholder from '../components/Placeholder.astro';
   .now {
     display: grid;
     gap: var(--space-2);
+    justify-items: start;
     max-width: 42em;
   }
 
@@ -85,9 +125,27 @@ import Placeholder from '../components/Placeholder.astro';
 
   .contact {
     display: grid;
-    gap: var(--space-4);
+    gap: var(--space-5);
     justify-items: start;
     padding: var(--space-7);
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4) var(--space-6);
+    width: 100%;
+    margin: 0;
+  }
+
+  .fact {
+    display: grid;
+    gap: var(--space-1);
+    align-content: start;
+  }
+
+  .fact dd {
+    margin: 0;
   }
 
   @media (max-width: 800px) {
@@ -96,7 +154,6 @@ import Placeholder from '../components/Placeholder.astro';
     }
     .bio-row :global(.portrait) {
       max-width: 360px;
-      width: 100%;
     }
   }
 

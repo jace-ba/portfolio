@@ -7,7 +7,7 @@ import { navItems, isCurrentPath } from '../lib/nav';
 <nav class="site-nav" aria-label="Main">
   {
     navItems.map((item) => (
-      <IsoButton href={item.href} size="square" variant={item.variant} pressed={isCurrentPath(item.href, Astro.url.pathname)}>
+      <IsoButton href={item.href} size="square" variant={item.variant} mark pressed={isCurrentPath(item.href, Astro.url.pathname)}>
         <Icon name={item.icon} />
         {item.label}
       </IsoButton>
@@ -19,6 +19,11 @@ import { navItems, isCurrentPath } from '../lib/nav';
   .site-nav {
     display: flex;
     gap: var(--space-3);
+  }
+
+  /* Already on this page, so the seated button is not a link to follow. */
+  .site-nav :global(a.iso-btn[aria-current='page']) {
+    cursor: default;
   }
 </style>
 
@@ -36,8 +41,36 @@ import { navItems, isCurrentPath } from '../lib/nav';
     });
   }
 
+  // The dot follows the page that is on screen, so it moves with the swap
+  // and not when the destination button seats.
+  function placeDot(pathname: string) {
+    document.querySelectorAll<HTMLElement>('.site-nav .iso-hole').forEach((hole) => {
+      const link = hole.querySelector('a.iso-btn');
+      const current = isCurrentPath(link?.getAttribute('href') ?? '', pathname);
+      hole.classList.toggle('is-current', current);
+    });
+  }
+
   // Seat the destination as soon as navigation starts; the old button's
   // release keeps running while the next page loads and swaps in.
   document.addEventListener('astro:before-preparation', (e) => seat(e.to.pathname));
-  document.addEventListener('astro:after-swap', () => seat(location.pathname));
+  document.addEventListener('astro:after-swap', () => {
+    seat(location.pathname);
+    placeDot(location.pathname);
+  });
+
+  // Capture runs before the router. A prevented click is left to the browser,
+  // which then does nothing, so the current page stays put.
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      const target = event.target;
+      const link = target instanceof Element ? target.closest('a.iso-btn') : null;
+      if (link?.closest('.site-nav') && link.getAttribute('aria-current') === 'page') {
+        event.preventDefault();
+      }
+    },
+    true,
+  );
 </script>

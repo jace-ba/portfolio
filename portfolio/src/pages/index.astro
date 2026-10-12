@@ -1,38 +1,26 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import IsoButton from '../components/IsoButton.astro';
-import Icon from '../components/Icon.astro';
 import ProjectCard from '../components/ProjectCard.astro';
-import { getProjects } from '../lib/projects';
+import { getMainProjects } from '../lib/projects';
 
-const featured = (await getProjects()).filter((p) => p.data.featured).slice(0, 3);
+const featured = (await getMainProjects()).filter((p) => p.data.featured).slice(0, 3);
 ---
 
 <BaseLayout>
   <div class="page">
     <section class="intro hero">
       <h1>Jace Baptista-Allan</h1>
-      <div class="button-row">
-        <IsoButton href="/projects" variant="azure">
-          <Icon name="arrowRight" />
-          See my projects
-        </IsoButton>
-        <IsoButton href="/about">About me</IsoButton>
-      </div>
+      <p class="lede">Open to spring and summer 2027 internships</p>
     </section>
 
     <section class="section" aria-labelledby="selected">
       <div class="section-head">
         <h2 id="selected">Selected projects</h2>
-        <a href="/projects">All projects →</a>
+        <a href="/projects">All projects</a>
       </div>
       <div class="card-grid">
         {featured.map((project) => <ProjectCard project={project} />)}
       </div>
-    </section>
-
-    <section class="section" aria-labelledby="services">
-      <h2 id="services">What I do</h2>
     </section>
   </div>
 </BaseLayout>

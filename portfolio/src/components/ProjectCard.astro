@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import IsoTile from './IsoTile.astro';
+import Icon from './Icon.astro';
 import Tag from './Tag.astro';
 
 interface Props {
@@ -8,20 +9,31 @@ interface Props {
 }
 
 const { project } = Astro.props;
-const { title, summary, category, stack, accent } = project.data;
+const { title, summary, category, stack, accent, kind, href } = project.data;
+const small = kind === 'small';
+/* A small build without a link yet renders as a plain card, not a dead link. */
+const Wrapper = small && !href ? 'div' : 'a';
+const linkProps = small
+  ? href
+    ? { href, target: '_blank', rel: 'noopener noreferrer' }
+    : {}
+  : { href: `/projects/${project.id}` };
 ---
 
-<a class="card" href={`/projects/${project.id}`}>
-  <IsoTile accent={accent} />
+<Wrapper class:list={['card', { 'card--small': small }]} {...linkProps}>
+  {!small && <IsoTile accent={accent} />}
   <div class="body">
-    <h3>{title}</h3>
+    <h3>
+      {title}
+      {small && href && <Icon name="external" size={18} class="external" />}
+    </h3>
     <p>{summary}</p>
     <div class="tags">
       <Tag accent={accent}>{category}</Tag>
       <Tag>{stack}</Tag>
     </div>
   </div>
-</a>
+</Wrapper>
 
 <style>
   .card {
@@ -38,6 +50,10 @@ const { title, summary, category, stack, accent } = project.data;
     border-radius: var(--radius-lg);
   }
 
+  .card--small {
+    padding: var(--space-4) var(--space-3);
+  }
+
   .body {
     display: grid;
     gap: var(--space-2);
@@ -49,7 +65,18 @@ const { title, summary, category, stack, accent } = project.data;
     font-weight: 600;
   }
 
+  .card--small h3 {
+    font-size: var(--text-lg);
+  }
+
   p {
+    color: var(--muted);
+  }
+
+  h3 :global(.external) {
+    display: inline-block;
+    margin-left: var(--space-1);
+    vertical-align: -0.15em;
     color: var(--muted);
   }
 

@@ -14,10 +14,15 @@ const projects = defineCollection({
     /** Shown as the neutral tag. */
     stack: z.string(),
     accent: z.enum(accents),
-    year: z.number().int(),
+    /** Optional so small builds with no single date can leave it out. */
+    year: z.number().int().optional(),
     /** Lower comes first. */
     order: z.number().int().default(100),
     featured: z.boolean().default(false),
+    /** `project` gets a detail page; `small` is a single card on the Projects page. */
+    kind: z.enum(['project', 'small']).default('project'),
+    /** External link for a small build. */
+    href: z.url().optional(),
   }),
 });
 

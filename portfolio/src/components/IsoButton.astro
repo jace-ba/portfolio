@@ -13,6 +13,8 @@ interface Props extends Omit<HTMLAttributes<'button'>, 'class'> {
   size?: Size;
   /** Seated in the fully-pressed position (current page, active toggle). */
   pressed?: boolean;
+  /** A dot under the hole while the button is seated. Uses the face in dark and the edge on the light bar. */
+  mark?: boolean;
   /** Applied to the outer wrapper, for layout. */
   class?: string;
 }
@@ -22,6 +24,7 @@ const {
   variant = 'neutral',
   size = 'pill',
   pressed = false,
+  mark = false,
   class: className,
   type,
   ...rest
@@ -30,7 +33,7 @@ const {
 const Tag = href ? 'a' : 'button';
 ---
 
-<span class:list={['iso-hole', className]}>
+<span class:list={['iso-hole', className, { 'is-current': mark && pressed }]}>
   <Tag
     class:list={['iso-btn', `iso-btn--${size}`, `iso-btn--${variant}`, { 'is-pressed': pressed }]}
     href={href}
@@ -41,6 +44,7 @@ const Tag = href ? 'a' : 'button';
   >
     <slot />
   </Tag>
+  {mark && <span class="nav-mark" aria-hidden="true"></span>}
 </span>
 
 <style>
@@ -213,6 +217,33 @@ const Tag = href ? 'a' : 'button';
     --btn-edge: var(--gold-edge);
     --btn-text: var(--gold-label);
   }
+
+  /* Centered in the header's padding under the hole. The hole does not
+     grow, so the dot never changes the button's layout. Shown and hidden
+     with the page swap, not with the button's press. */
+  .nav-mark {
+    --mark-size: 6px;
+    position: absolute;
+    left: 50%;
+    bottom: calc((var(--hdr-pad-block, var(--space-5)) + var(--mark-size)) / -2);
+    width: var(--mark-size);
+    height: var(--mark-size);
+    border-radius: var(--radius-pill);
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .iso-hole:has(.nav-mark) {
+    position: relative;
+  }
+  .iso-hole.is-current > .nav-mark {
+    opacity: 1;
+  }
+  .iso-hole:has(.iso-btn--neutral) > .nav-mark { background: var(--neutral-mark); }
+  .iso-hole:has(.iso-btn--azure) > .nav-mark { background: var(--azure-mark); }
+  .iso-hole:has(.iso-btn--scarlet) > .nav-mark { background: var(--scarlet-mark); }
+  .iso-hole:has(.iso-btn--tangerine) > .nav-mark { background: var(--tangerine-mark); }
+  .iso-hole:has(.iso-btn--gold) > .nav-mark { background: var(--gold-mark); }
 </style>
 
 <script>

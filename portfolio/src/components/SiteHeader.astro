@@ -138,13 +138,15 @@ import ThemeToggle from './ThemeToggle.astro';
 
   .site-header {
     --hdr-gap: var(--space-5);
+    /* The nav dot centers itself in this band, under the seated button. */
+    --hdr-pad-block: var(--space-5);
     position: relative;
     isolation: isolate;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     column-gap: var(--hdr-gap);
-    padding: var(--space-5);
+    padding: var(--hdr-pad-block);
   }
 
   /* The painted cell. Buttons stay outside it and keep tilting. */
@@ -263,10 +265,11 @@ import ThemeToggle from './ThemeToggle.astro';
     }
     .site-header {
       --hdr-gap: var(--space-5);
+      --hdr-pad-block: var(--space-4);
       grid-template-columns: auto auto;
       justify-content: center;
       row-gap: var(--hdr-row-gap);
-      padding: var(--space-4) var(--space-6);
+      padding: var(--hdr-pad-block) var(--space-6);
     }
     .brand {
       /* A step down from the 19px single-row wordmark, so the name sits
@@ -355,7 +358,7 @@ import ThemeToggle from './ThemeToggle.astro';
         (100cqi - 2 * var(--hdr-pad) - 3 * var(--hole-x) - 2 * var(--nav-gap)) / 3,
         88px
       );
-      padding: var(--space-4) var(--hdr-pad);
+      padding: var(--hdr-pad-block) var(--hdr-pad);
     }
     .brand {
       --brand-pad: 0px;

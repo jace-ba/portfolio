@@ -1,20 +1,31 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
-import { getProjects } from '../../lib/projects';
+import { getMainProjects, getSmallBuilds } from '../../lib/projects';
 
-const projects = await getProjects();
+const projects = await getMainProjects();
+const smallBuilds = await getSmallBuilds();
 ---
 
 <BaseLayout title="Projects" description="Projects by Jace Baptista-Allan.">
   <div class="page">
     <section class="intro">
-      <p class="eyebrow">Work</p>
       <h1>Projects</h1>
     </section>
 
     <div class="card-grid">
       {projects.map((project) => <ProjectCard project={project} />)}
     </div>
+
+    {
+      smallBuilds.length > 0 && (
+        <section class="section" aria-labelledby="smaller-builds">
+          <h2 id="smaller-builds">Smaller builds</h2>
+          <div class="card-grid">
+            {smallBuilds.map((project) => <ProjectCard project={project} />)}
+          </div>
+        </section>
+      )
+    }
   </div>
 </BaseLayout>

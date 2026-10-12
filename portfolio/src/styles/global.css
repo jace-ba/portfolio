@@ -114,15 +114,14 @@ a {
 
 .eyebrow {
   font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .lede {
   font-size: var(--text-lg);
-  color: var(--muted);
   max-width: 60ch;
 }
 

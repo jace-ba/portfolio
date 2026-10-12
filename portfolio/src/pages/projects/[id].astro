@@ -5,20 +5,25 @@ import IsoButton from '../../components/IsoButton.astro';
 import IsoTile from '../../components/IsoTile.astro';
 import Icon from '../../components/Icon.astro';
 import Tag from '../../components/Tag.astro';
-import ProjectCard from '../../components/ProjectCard.astro';
-import { getProjects } from '../../lib/projects';
+import Placeholder from '../../components/Placeholder.astro';
+import { getMainProjects } from '../../lib/projects';
 
 export async function getStaticPaths() {
-  const projects = await getProjects();
+  const projects = await getMainProjects();
   return projects.map((project, i) => ({
     params: { id: project.id },
-    props: { project, next: projects[(i + 1) % projects.length] },
+    props: {
+      project,
+      prev: projects[(i - 1 + projects.length) % projects.length],
+      next: projects[(i + 1) % projects.length],
+    },
   }));
 }
 
-const { project, next } = Astro.props;
+const { project, prev, next } = Astro.props;
 const { title, summary, category, stack, accent, year } = project.data;
 const { Content } = await render(project);
+const hasWriteUp = !!project.body?.trim();
 ---
 
 <BaseLayout title={title} description={summary}>
@@ -31,29 +36,33 @@ const { Content } = await render(project);
     </div>
 
     <header class="intro">
-      <p class="eyebrow">{category} · {year}</p>
       <h1>{title}</h1>
       <p class="lede">{summary}</p>
       <div class="tags">
         <Tag accent={accent}>{category}</Tag>
         <Tag>{stack}</Tag>
+        {year != null && <Tag>{year}</Tag>}
       </div>
     </header>
 
     <IsoTile accent={accent} size="hero" />
 
     <div class="prose">
-      <Content />
+      {hasWriteUp ? <Content /> : <Placeholder label="Write-up" />}
     </div>
 
     {
       next.id !== project.id && (
-        <section class="section next" aria-labelledby="next">
-          <h2 id="next">Next project</h2>
-          <div class="card-grid">
-            <ProjectCard project={next} />
-          </div>
-        </section>
+        <nav class="project-nav" aria-label="More projects">
+          <IsoButton href={`/projects/${prev.id}`}>
+            <Icon name="arrowLeft" />
+            Previous project
+          </IsoButton>
+          <IsoButton href={`/projects/${next.id}`}>
+            Next project
+            <Icon name="arrowRight" />
+          </IsoButton>
+        </nav>
       )
     }
   </article>
@@ -62,7 +71,19 @@ const { Content } = await render(project);
 <style>
   .tags {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
+  }
+
+  .project-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  /* Stays on the right when the pair wraps onto two rows. */
+  .project-nav > :global(:last-child) {
+    margin-left: auto;
   }
 
   .prose {

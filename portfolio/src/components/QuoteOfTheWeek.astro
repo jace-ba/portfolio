@@ -1,0 +1,67 @@
+---
+import { quotes, quoteIndexFor } from '../data/quotes';
+
+/* The build renders its own week's quote so the card is never empty without
+   JavaScript. The script below swaps in the visitor's current week. */
+const quote = quotes[quoteIndexFor(new Date())];
+---
+
+<figure class="panel quote" data-quote>
+  <p class="eyebrow">Quote of the week</p>
+  <blockquote>
+    <p data-quote-text>{quote.text}</p>
+  </blockquote>
+  <figcaption>
+    <span data-quote-author>{quote.author}</span>, <cite data-quote-source>{quote.source}</cite>
+  </figcaption>
+</figure>
+
+<script>
+  import { quotes, quoteIndexFor } from '../data/quotes';
+
+  function showCurrentQuote() {
+    const card = document.querySelector('[data-quote]');
+    if (!card) return;
+    const quote = quotes[quoteIndexFor(new Date())];
+    card.querySelector('[data-quote-text]')!.textContent = quote.text;
+    card.querySelector('[data-quote-author]')!.textContent = quote.author;
+    card.querySelector('[data-quote-source]')!.textContent = quote.source;
+  }
+
+  document.addEventListener('astro:page-load', showCurrentQuote);
+</script>
+
+<style>
+  .quote {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    max-width: 42em;
+  }
+
+  blockquote {
+    margin: 0;
+    font-size: var(--text-xl);
+    line-height: var(--leading-tight);
+    font-weight: 500;
+  }
+
+  blockquote p::before {
+    content: '\201C';
+    color: var(--gold-ink);
+  }
+
+  blockquote p::after {
+    content: '\201D';
+    color: var(--gold-ink);
+  }
+
+  figcaption {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+
+  cite {
+    font-style: italic;
+  }
+</style>
