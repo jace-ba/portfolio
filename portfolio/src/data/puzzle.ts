@@ -12,7 +12,7 @@ export interface Step {
 export const setup =
   'The marked segments are congruent, and the small circle is tangent at the marked points.';
 
-/** Revealed one at a time. Step 1 labels the figure, step 2 adds the red relation, step 3 the blue one. */
+/** Revealed one at a time. Step 1 labels the figure, step 2 adds the red relation, step 3 the gold one. */
 export const steps: Step[] = [
   {
     text: 'The quarter circle has radius 1, each marked segment has length x, and the small circle has radius r.',
@@ -41,7 +41,7 @@ export const steps: Step[] = [
     equations: [
       {
         tex: String.raw`\begin{aligned}
-          \Rightarrow \quad \begin{cases} 1-2r &= x^2 \\ \sqrt{4r^2-x^2} &= x^2 \end{cases} & \\
+          \begin{cases} 1-2r &= x^2 \\ \sqrt{4r^2-x^2} &= x^2 \end{cases} & \\
           \Rightarrow \quad \sqrt{4r^2-(1-2r)} &= 1-2r \\
           4r^2+2r-1 &= 4r^2-4r+1 \\
           6r &= 2 \\
