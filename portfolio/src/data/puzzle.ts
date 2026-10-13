@@ -1,7 +1,7 @@
 export interface Equation {
   tex: string;
   /** Matches the segments of the same color on the figure. */
-  color?: 'red' | 'blue';
+  color?: 'red' | 'gold';
 }
 
 export interface Step {
@@ -22,7 +22,7 @@ export const steps: Step[] = [
     equations: [{ tex: String.raw`\sqrt{x^2+r^2} + r = 1`, color: 'red' }],
   },
   {
-    equations: [{ tex: String.raw`\frac{\sqrt{4r^2-x^2}}{x}=\frac{x}{1}`, color: 'blue' }],
+    equations: [{ tex: String.raw`\frac{\sqrt{4r^2-x^2}}{x}=\frac{x}{1}`, color: 'gold' }],
   },
   {
     equations: [
@@ -34,7 +34,7 @@ export const steps: Step[] = [
         \end{aligned}`,
         color: 'red',
       },
-      { tex: String.raw`\sqrt{4r^2-x^2} = x^2`, color: 'blue' },
+      { tex: String.raw`\sqrt{4r^2-x^2} = x^2`, color: 'gold' },
     ],
   },
   {

@@ -48,8 +48,8 @@ const labelOT = beside(O, T, 20);
 const labelPT = beside(T, P, -16, 0.72);
 const labelRDown = beside(C, T, -14);
 const labelROut = beside(C, E, 16, 0.62);
-/* Negative offset is the upper side of OC. The midpoint sits on the small circle, and this normal is tangent to it. */
-const labelOC = beside(O, C, -22);
+/* Toward O, and a little closer to the segment, so the label sits outside the shaded circle. */
+const labelOC = beside(O, C, -22, 0.35);
 const labelChord = beside(P, Ttop, -28);
 
 const add = (p: Pt, q: Pt): Pt => [p[0] + q[0], p[1] + q[1]];
@@ -129,7 +129,7 @@ const figureLabel =
       <text class="var" x={labelROut[0]} y={labelROut[1]} text-anchor="middle" dominant-baseline="middle">r</text>
     </g>
 
-    <g class="layer layer--blue">
+    <g class="layer layer--gold">
       <line class="dashed" {...line(T, Ttop)} />
       <line {...line(P, Ttop)} />
       <line {...line(P, T)} />
@@ -146,7 +146,7 @@ const figureLabel =
 
     <g class="layer layer--red">
       <line {...line(O, C)} />
-      <line {...line(C, E)} />
+      <line class="dashed" {...line(C, E)} />
       <text class="measure" x={labelOC[0]} y={labelOC[1]} text-anchor="middle" dominant-baseline="middle">√(x²+r²)</text>
     </g>
 
@@ -288,7 +288,7 @@ const figureLabel =
   }
 
   .layer--red line,
-  .layer--blue line:not(.mark) {
+  .layer--gold line:not(.mark) {
     stroke-width: 4;
     stroke-linecap: round;
   }
@@ -301,9 +301,9 @@ const figureLabel =
     fill: var(--scarlet-ink);
   }
 
-  .layer--blue line,
+  .layer--gold line,
   .mark {
-    stroke: var(--azure-ink);
+    stroke: var(--gold-ink);
   }
 
   .mark {
@@ -313,8 +313,8 @@ const figureLabel =
     stroke-linejoin: round;
   }
 
-  .layer--blue text {
-    fill: var(--azure-ink);
+  .layer--gold text {
+    fill: var(--gold-ink);
   }
 
   text.measure {
@@ -324,7 +324,7 @@ const figureLabel =
 
   .puzzle:not([data-step='0']) .layer--labels,
   .puzzle:not([data-step='0']):not([data-step='1']) .layer--red,
-  .puzzle:not([data-step='0']):not([data-step='1']):not([data-step='2']) .layer--blue,
+  .puzzle:not([data-step='0']):not([data-step='1']):not([data-step='2']) .layer--gold,
   .puzzle:not(.is-interactive):has(.solution[open]) .layer {
     opacity: 1;
   }
@@ -410,8 +410,8 @@ const figureLabel =
     color: var(--scarlet-ink);
   }
 
-  .eq--blue {
-    color: var(--azure-ink);
+  .eq--gold {
+    color: var(--gold-ink);
   }
 
   .eq,
