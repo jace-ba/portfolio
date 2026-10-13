@@ -1,0 +1,444 @@
+---
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import IsoButton from './IsoButton.astro';
+import { setup, steps } from '../data/puzzle';
+
+/* The figure is built from the solution, so it is exact: r = 1/3, x = sqrt(1 - 2r). */
+const r = 1 / 3;
+const x = Math.sqrt(1 - 2 * r);
+const S = 300;
+type Pt = [number, number];
+const at = (u: number, v: number): Pt => [u * S, (1 - v) * S];
+
+const O = at(0, 0);
+const A = at(0, 1);
+const B = at(1, 0);
+const T = at(x, 0);
+const C = at(x, r);
+const Ttop = at(x, 2 * r);
+const E = at(x / (1 - r), r / (1 - r));
+const P = at(x / 2, 1 / 2);
+
+const line = (p: Pt, q: Pt) => ({ x1: p[0], y1: p[1], x2: q[0], y2: q[1] });
+
+/** Two short strokes across the middle of pq, marking it congruent to another segment. */
+function ticks(p: Pt, q: Pt) {
+  const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const d: Pt = [(q[0] - p[0]) / len, (q[1] - p[1]) / len];
+  const n: Pt = [-d[1], d[0]];
+  const m: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  return [-3, 3].map((o) => {
+    const c: Pt = [m[0] + d[0] * o, m[1] + d[1] * o];
+    return line([c[0] - n[0] * 7, c[1] - n[1] * 7], [c[0] + n[0] * 7, c[1] + n[1] * 7]);
+  });
+}
+
+/** A point beside pq at fraction t along it, pushed out along the normal. */
+function beside(p: Pt, q: Pt, offset: number, t = 0.5): Pt {
+  const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const n: Pt = [-(q[1] - p[1]) / len, (q[0] - p[0]) / len];
+  const m: Pt = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+  return [m[0] + n[0] * offset, m[1] + n[1] * offset];
+}
+
+const labelOne = beside(O, A, -14);
+const labelOT = beside(O, T, 20);
+/* OC crosses PT at its midpoint, so this label sits off-center to clear the red line. */
+const labelPT = beside(T, P, -16, 0.72);
+const labelRDown = beside(C, T, -14);
+const labelROut = beside(C, E, 16, 0.62);
+/* Negative offset is the upper side of OC. The midpoint sits on the small circle, and this normal is tangent to it. */
+const labelOC = beside(O, C, -22);
+const labelChord = beside(P, Ttop, -28);
+
+const add = (p: Pt, q: Pt): Pt => [p[0] + q[0], p[1] + q[1]];
+const sub = (p: Pt, q: Pt): Pt => [p[0] - q[0], p[1] - q[1]];
+const mul = (p: Pt, k: number): Pt => [p[0] * k, p[1] * k];
+const unit = (p: Pt): Pt => {
+  const len = Math.hypot(p[0], p[1]);
+  return [p[0] / len, p[1] / len];
+};
+
+/** The right-angle mark inside angle a-v-b. */
+function rightAngle(v: Pt, a: Pt, b: Pt, size = 16) {
+  const u = unit(sub(a, v));
+  const w = unit(sub(b, v));
+  const p1 = add(v, mul(u, size));
+  const corner = add(p1, mul(w, size));
+  const p3 = add(v, mul(w, size));
+  return `M ${p1[0]} ${p1[1]} L ${corner[0]} ${corner[1]} L ${p3[0]} ${p3[1]}`;
+}
+
+/** An arc across the smaller angle a-v-b, with tick marks on the bisector. */
+function angleArc(v: Pt, a: Pt, b: Pt, radius: number, tickCount: number) {
+  const ang = (p: Pt) => Math.atan2(p[1] - v[1], p[0] - v[0]);
+  const start = ang(a);
+  let delta = ang(b) - start;
+  while (delta <= -Math.PI) delta += 2 * Math.PI;
+  while (delta > Math.PI) delta -= 2 * Math.PI;
+  const end = start + delta;
+  const atAng = (theta: number): Pt => [v[0] + radius * Math.cos(theta), v[1] + radius * Math.sin(theta)];
+  const p0 = atAng(start);
+  const p1 = atAng(end);
+  const arc = `M ${p0[0]} ${p0[1]} A ${radius} ${radius} 0 0 ${delta > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`;
+  const mid = start + delta / 2;
+  const radial: Pt = [Math.cos(mid), Math.sin(mid)];
+  const tangent: Pt = [-radial[1], radial[0]];
+  const marks = Array.from({ length: tickCount }, (_, i) => {
+    const shift = (i - (tickCount - 1) / 2) * 5;
+    const c = add(atAng(mid), mul(tangent, shift));
+    return line(add(c, mul(radial, -4)), add(c, mul(radial, 4)));
+  });
+  return { arc, marks };
+}
+
+/* The vertical through T is parallel to OA, with AT as a transversal. */
+const angleRx = angleArc(T, C, P, 26, 1);
+const angleRxMatch = angleArc(A, O, T, 26, 1);
+
+const rendered = steps.map((step) => ({
+  text: step.text,
+  equations: step.equations.map((eq) => ({
+    color: eq.color,
+    html: katex.renderToString(eq.tex, { output: 'htmlAndMathml', displayMode: true, throwOnError: true }),
+  })),
+}));
+
+const figureLabel =
+  'A quarter circle with a smaller shaded circle inside it. The small circle touches the bottom edge and the arc. A line from the top corner to where the small circle touches the bottom edge crosses the small circle; the part of that line inside the small circle is marked equal in length to the bottom edge from the corner to the touch point.';
+---
+
+<div class="panel puzzle" data-puzzle data-step="0">
+  <svg class="figure" viewBox="-50 -36 390 400" role="img" aria-label={figureLabel}>
+    <g class="layer-base">
+      <circle class="shade" cx={C[0]} cy={C[1]} r={r * S} />
+      <path class="stroke" d={`M ${A[0]} ${A[1]} A ${S} ${S} 0 0 1 ${B[0]} ${B[1]}`} />
+      <line class="stroke" {...line(O, A)} />
+      <line class="stroke" {...line(O, B)} />
+      <line class="stroke" {...line(A, T)} />
+    </g>
+
+    <g class="layer layer--labels">
+      <line class="stroke dashed dash-radius" {...line(O, E)} />
+      <line class="stroke dashed dash-down" {...line(C, T)} />
+      <text x={labelOne[0]} y={labelOne[1]} text-anchor="end" dominant-baseline="middle">1</text>
+      <text class="var" x={labelOT[0]} y={labelOT[1]} text-anchor="middle" dominant-baseline="middle">x</text>
+      <text class="var" x={labelPT[0]} y={labelPT[1]} text-anchor="middle" dominant-baseline="middle">x</text>
+      <text class="var" x={labelRDown[0]} y={labelRDown[1]} text-anchor="start" dominant-baseline="middle">r</text>
+      <text class="var" x={labelROut[0]} y={labelROut[1]} text-anchor="middle" dominant-baseline="middle">r</text>
+    </g>
+
+    <g class="layer layer--blue">
+      <line class="dashed" {...line(T, Ttop)} />
+      <line {...line(P, Ttop)} />
+      <line {...line(P, T)} />
+      <line {...line(O, T)} />
+      <line {...line(O, A)} />
+      <path class="mark" d={rightAngle(O, A, T)} />
+      <path class="mark" d={rightAngle(P, T, Ttop)} />
+      <path class="mark" d={angleRx.arc} />
+      <path class="mark" d={angleRxMatch.arc} />
+      {angleRx.marks.map((m) => <line class="mark" {...m} />)}
+      {angleRxMatch.marks.map((m) => <line class="mark" {...m} />)}
+      <text class="measure" x={labelChord[0]} y={labelChord[1]} text-anchor="middle" dominant-baseline="middle">√(4r²−x²)</text>
+    </g>
+
+    <g class="layer layer--red">
+      <line {...line(O, C)} />
+      <line {...line(C, E)} />
+      <text class="measure" x={labelOC[0]} y={labelOC[1]} text-anchor="middle" dominant-baseline="middle">√(x²+r²)</text>
+    </g>
+
+    <g class="ticks">
+      {[...ticks(O, T), ...ticks(P, T)].map((t) => <line class="tick" {...t} />)}
+    </g>
+
+    <g class="dots">
+      {[A, O, B, T, P, E].map(([cx, cy]) => <circle class="dot" cx={cx} cy={cy} r="5" />)}
+      <circle class="dot center-dot" cx={C[0]} cy={C[1]} r="5" />
+    </g>
+  </svg>
+
+  <div class="side">
+    <p class="question">
+      What fraction of the quarter circle is <span class="shade-word">shaded</span>?
+    </p>
+    <p>{setup}</p>
+
+    <details class="solution" data-solution>
+      <summary>Show the solution</summary>
+      <ol class="hints" aria-live="polite">
+        {
+          rendered.map((step, i) => (
+            <li data-hint={i + 1}>
+              {step.text && <p>{step.text}</p>}
+              {step.equations.length > 0 && (
+                <div class="eqs">
+                  {step.equations.map((eq) => (
+                    <div class:list={['eq', eq.color && `eq--${eq.color}`]} set:html={eq.html} />
+                  ))}
+                </div>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+    </details>
+
+    <div class="controls" data-controls hidden>
+      <IsoButton variant="tangerine" data-hint-button>
+        <span data-hint-label>Show a hint</span>
+      </IsoButton>
+    </div>
+  </div>
+</div>
+
+<script>
+  function hintLabel(step: number, total: number) {
+    if (step === 0) return 'Show a hint';
+    if (step === total) return 'Start over';
+    if (step === total - 1) return 'Show the answer';
+    return `Next hint (${step + 1} of ${total})`;
+  }
+
+  function initPuzzles() {
+    document.querySelectorAll<HTMLElement>('[data-puzzle]').forEach((puzzle) => {
+      if (puzzle.dataset.bound) return;
+      puzzle.dataset.bound = 'true';
+
+      const solution = puzzle.querySelector<HTMLDetailsElement>('[data-solution]')!;
+      const hints = [...puzzle.querySelectorAll<HTMLElement>('[data-hint]')];
+      const controls = puzzle.querySelector<HTMLElement>('[data-controls]')!;
+      const button = puzzle.querySelector<HTMLButtonElement>('[data-hint-button]')!;
+      const label = puzzle.querySelector<HTMLElement>('[data-hint-label]')!;
+      const total = hints.length;
+      let step = 0;
+
+      const render = () => {
+        puzzle.dataset.step = String(step);
+        hints.forEach((hint, i) => (hint.hidden = i >= step));
+        label.textContent = hintLabel(step, total);
+      };
+
+      solution.open = true;
+      puzzle.classList.add('is-interactive');
+      controls.hidden = false;
+      button.addEventListener('click', () => {
+        step = step === total ? 0 : step + 1;
+        render();
+      });
+      render();
+    });
+  }
+
+  document.addEventListener('astro:page-load', initPuzzles);
+</script>
+
+<style>
+  .puzzle {
+    display: grid;
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .figure {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .stroke,
+  .tick {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+
+  .shade {
+    fill: var(--tangerine);
+    fill-opacity: 0.4;
+    stroke: var(--muted);
+    stroke-width: 2.5;
+  }
+
+  .dashed {
+    stroke-dasharray: 6 6;
+  }
+
+  .dot {
+    fill: var(--ink);
+  }
+
+  text {
+    fill: var(--ink);
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  text.var {
+    font-style: italic;
+  }
+
+  .layer {
+    opacity: 0;
+    transition: opacity var(--dur-release) var(--ease-press);
+  }
+
+  .layer--red line,
+  .layer--blue line:not(.mark) {
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  .layer--red line {
+    stroke: var(--scarlet-ink);
+  }
+
+  .layer--red text {
+    fill: var(--scarlet-ink);
+  }
+
+  .layer--blue line,
+  .mark {
+    stroke: var(--azure-ink);
+  }
+
+  .mark {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .layer--blue text {
+    fill: var(--azure-ink);
+  }
+
+  text.measure {
+    font-size: 15px;
+    font-style: italic;
+  }
+
+  .puzzle:not([data-step='0']) .layer--labels,
+  .puzzle:not([data-step='0']):not([data-step='1']) .layer--red,
+  .puzzle:not([data-step='0']):not([data-step='1']):not([data-step='2']) .layer--blue,
+  .puzzle:not(.is-interactive):has(.solution[open]) .layer {
+    opacity: 1;
+  }
+
+  /* A colored line replaces the gray dash, so the dash must not show through its gaps. */
+  .center-dot {
+    opacity: 0;
+  }
+
+  .puzzle:not([data-step='0']) .center-dot,
+  .puzzle:not(.is-interactive):has(.solution[open]) .center-dot {
+    opacity: 1;
+  }
+
+  .puzzle:not([data-step='0']):not([data-step='1']) .dash-radius,
+  .puzzle:not([data-step='0']):not([data-step='1']):not([data-step='2']) .dash-down,
+  .puzzle:not(.is-interactive):has(.solution[open]) :is(.dash-radius, .dash-down) {
+    opacity: 0;
+  }
+
+  .side {
+    display: grid;
+    gap: var(--space-4);
+    min-width: 0;
+  }
+
+  .controls {
+    justify-self: start;
+  }
+
+  .question {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    max-width: 36em;
+  }
+
+  .shade-word {
+    color: var(--tangerine);
+  }
+
+  .solution {
+    width: 100%;
+  }
+
+  .solution summary {
+    cursor: pointer;
+    color: var(--link);
+  }
+
+  .is-interactive .solution summary {
+    display: none;
+  }
+
+  .hints {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0;
+    padding-left: 1.5em;
+  }
+
+  .is-interactive .hints:not(:has(li:not([hidden]))) {
+    display: none;
+  }
+
+  .hints li[hidden] {
+    display: none;
+  }
+
+  .hints li::marker {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .eqs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .eq--red {
+    color: var(--scarlet-ink);
+  }
+
+  .eq--blue {
+    color: var(--azure-ink);
+  }
+
+  .eq,
+  .eq :global(.katex),
+  .eq :global(.katex-display) {
+    overflow: visible;
+  }
+
+  .eq :global(.katex-display) {
+    margin: 0;
+    text-align: left;
+  }
+
+  .eq :global(.katex-display > .katex) {
+    text-align: left;
+  }
+
+  .controls[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 800px) {
+    .puzzle {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .figure {
+      max-width: 340px;
+    }
+  }
+</style>
