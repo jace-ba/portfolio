@@ -3,7 +3,7 @@ import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import IsoButton from '../components/IsoButton.astro';
 import Icon from '../components/Icon.astro';
-import Placeholder from '../components/Placeholder.astro';
+import GeometryPuzzle from '../components/GeometryPuzzle.astro';
 import QuoteOfTheWeek from '../components/QuoteOfTheWeek.astro';
 import profilePhoto from '../assets/profile-photo.jpg';
 
@@ -33,18 +33,45 @@ const openTo = [
         <p class="role">
           Computer Science and Physics student at the University of Washington
         </p>
-        <Placeholder label="Intro, 40–60 words" />
+        <p class="lede">
+          Born and raised in Seattle, I build VR physics simulations at UW. I build to understand, then
+          build so others can understand too.
+        </p>
       </div>
     </section>
 
     <section class="section" aria-labelledby="origin">
       <h2 id="origin">How I got here</h2>
-      <Placeholder label="How I got here, 80–110 words" />
+      <div class="copy">
+        <p>
+          I first fell in love with computer science and physics at the same time, during a middle
+          school science fair project. Armed with an Arduino, servo motors, and a pinball shooter I
+          scavenged at a garage sale, I constructed a pinball cannon and built a trajectory prediction
+          program with Berkeley’s Snap! that could adjust the launch angle to fire the pinball a target
+          distance. And despite my improvised materials, it actually worked.
+        </p>
+        <p>
+          Physics asks you what’s true underneath a system, and computer science lets you turn that
+          model into something other people can use. During my time tutoring physics and building labs
+          for VR, I’ve seen how much the right tool changes what people can grasp.
+        </p>
+      </div>
     </section>
 
     <section class="section" aria-labelledby="work">
       <h2 id="work">How I work</h2>
-      <Placeholder label="How I work, 60–80 words" />
+      <div class="copy">
+        <p>
+          I prefer being spec-first. When working in teams or with AI agents, I always start with the
+          requirements and get everyone on the same page before anything gets built.
+        </p>
+        <p>
+          At NOMR, I focus on mathematical accuracy and on designing open-ended labs that let users set
+          up their own experiment without following a deterministic lesson plan. Each week I
+          consolidate research, meet with an expert, and set goals for the next sprint. I derive every
+          formula on paper before it gets solidified into the code.
+        </p>
+      </div>
       <div class="now">
         <p class="eyebrow">Right now</p>
         <h3>Software developer, Novel Observations in Mixed Reality</h3>
@@ -55,7 +82,18 @@ const openTo = [
 
     <section class="section" aria-labelledby="outside">
       <h2 id="outside">Outside the lab</h2>
-      <Placeholder label="Outside the lab, 40–60 words" />
+      <div class="copy">
+        <p>
+          I’ve played drums for 13 years, and I’ve been making 3D animations since 7th grade (fun fact:
+          when I was 13, I made a video intro for PewDiePie and he used it!). I also like building
+          custom keyboards. Right now, I’m working on machining a keyboard case out of some walnut wood.
+        </p>
+        <p>
+          I also love making geometry puzzles. This was one of my favorites to make. See if you can
+          solve it!
+        </p>
+      </div>
+      <GeometryPuzzle />
       <a href="/projects#smaller-builds">Smaller things I’ve built</a>
     </section>
 
@@ -106,6 +144,12 @@ const openTo = [
   .role {
     font-size: var(--text-lg);
     max-width: 28em;
+  }
+
+  .copy {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 65ch;
   }
 
   .now {
