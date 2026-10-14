@@ -40,9 +40,9 @@ export const steps: Step[] = [
   {
     equations: [
       {
-        tex: String.raw`\begin{aligned}
-          \begin{cases} 1-2r &= x^2 \\ \sqrt{4r^2-x^2} &= x^2 \end{cases} & \\
-          \Rightarrow \quad \sqrt{4r^2-(1-2r)} &= 1-2r \\
+        tex: String.raw`\begin{aligned}\begin{cases} 1-2r &= x^2 \\ \sqrt{4r^2-x^2} &= x^2 \end{cases} \quad\Rightarrow \\ \\ \\  \end{aligned}
+          \quad\begin{aligned}
+          \sqrt{4r^2-(1-2r)} &= 1-2r \\
           4r^2+2r-1 &= 4r^2-4r+1 \\
           6r &= 2 \\
           r &= \frac{1}{3}

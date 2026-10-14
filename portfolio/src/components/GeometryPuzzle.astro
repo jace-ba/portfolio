@@ -384,7 +384,22 @@ const figureLabel =
     column-gap: 2.5em;
     row-gap: var(--space-4);
     margin: 0;
-    padding-left: 1.5em;
+    padding-left: 0;
+    list-style: none;
+    counter-reset: hint;
+  }
+
+  .hints li {
+    counter-increment: hint;
+    display: grid;
+    grid-template-columns: 1.5em minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .hints li::before {
+    content: counter(hint) ".";
+    color: var(--muted);
+    font-weight: 600;
   }
 
   .hints li[data-hint='1'],
@@ -418,11 +433,6 @@ const figureLabel =
 
   .hints li[hidden] {
     display: none;
-  }
-
-  .hints li::marker {
-    color: var(--muted);
-    font-weight: 600;
   }
 
   .eqs {
