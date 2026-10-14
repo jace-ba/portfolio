@@ -216,7 +216,7 @@
   --space-8: 4rem;
   --space-9: 6rem;
 
-  --font-sans: "Rubik Variable", system-ui, sans-serif;
+  --font-sans: var(--font-rubik), Arial, sans-serif;
   --font-display: var(--font-sans);
 
   --text-xs: 0.75rem;

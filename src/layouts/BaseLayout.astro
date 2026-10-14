@@ -1,8 +1,8 @@
 ---
-import '@fontsource-variable/rubik';
 import '../styles/tokens.css';
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
+import { Font } from 'astro:assets';
 import SiteHeader from '../components/SiteHeader.astro';
 
 interface Props {
@@ -26,6 +26,7 @@ const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
+    <Font cssVariable="--font-rubik" preload />
     <title>{fullTitle}</title>
     <!-- Runs before first paint so the page never flashes the wrong theme. -->
     <script is:inline>
