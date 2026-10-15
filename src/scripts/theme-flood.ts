@@ -1,7 +1,9 @@
-// The new theme pours out of the toggle as a wobbly splash. Each element
-// keeps the old colors, via data-tone, until the paint reaches it. Text, the
-// button edge, and any background or border that changes then ease on their
-// own animations. A CSS transition would jump back to the original color when
+// The new theme pours out of the toggle as a wobbly splash. A unit keeps the
+// old colors, via data-tone, until the paint reaches it. Text, the button
+// edge, and any background or border that changes then ease on their own
+// animations. A descendant that would change with that unit, and that the
+// wave reaches in the same moment, inherits the fade instead. A CSS transition
+// would jump back to the original color when
 // an ancestor restyles, and a background transition can also be drawn one
 // frame late by the compositor. The nav bar, the logo, and page titles are
 // drawn again inside themselves: the copy is clipped to the same polygon the
@@ -44,13 +46,22 @@ const INK = 64;
 /** The covering fill starts once the antialiased fringe is outside the bitmap. */
 const COVER_PAD = 2;
 const EMPTY_CLIP = 'polygon(0px 0px, 0px 0px, 0px 0px)';
+/** Descendants farther apart than this keep their own fade, so matching text
+    still sweeps down the page instead of turning with one ancestor. */
+const FOLLOW_MS = 100;
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'LINK', 'TEMPLATE', 'NOSCRIPT', 'BR', 'WBR']);
 
 const root = document.documentElement;
 const canvas = document.getElementById('flood') as HTMLCanvasElement | null;
 const ctx = canvas?.getContext('2d') ?? null;
 
 let floods: Flood[] = [];
+/** Units. Each eases on its own; `followers` inherit that fade. */
 let els: Element[] = [];
+/** Border boxes for `els`, measured when the splash starts. */
+let rects: DOMRect[] = [];
+/** Inherit a nearby unit's color. No tone and no animation of their own. */
+let followers: Element[] = [];
 /** data-tone last written for els[i]. Avoids reading the attribute every frame. */
 let shown: Tone[] = [];
 let recorded: Element[] = [];
@@ -67,7 +78,7 @@ let bgOf: Record<Tone, string> = { light: '', dark: '' };
 let priorColor = new Map<Element, string>();
 /** Elements already handed to an animation. A later splash reads their live color. */
 let arrived = new Set<Element>();
-type FadeKind = 'text' | 'edge' | 'fill' | 'line';
+type FadeKind = 'text' | 'edge' | 'paint';
 type Fade = { anim: Animation; el: HTMLElement; kind: FadeKind };
 /** Color animations started by this splash. Nothing here is a CSS transition. */
 let fades = new Map<Element, Fade[]>();
@@ -95,6 +106,47 @@ type Job = { el: Element; tone: Tone; i: number; rect: DOMRect | null };
 const jobs: Job[] = [];
 let jobCount = 0;
 const hostRects = new Map<HTMLElement, DOMRect>();
+/** Set on scroll or resize. The next frame remeasures before it writes. */
+let rectsStale = false;
+let watching = false;
+
+function markRectsStale() {
+  rectsStale = true;
+}
+
+function watchViewport() {
+  if (watching) return;
+  watching = true;
+  window.addEventListener('scroll', markRectsStale, { capture: true, passive: true });
+  window.addEventListener('resize', markRectsStale);
+}
+
+function unwatchViewport() {
+  if (!watching) return;
+  watching = false;
+  window.removeEventListener('scroll', markRectsStale, { capture: true });
+  window.removeEventListener('resize', markRectsStale);
+  rectsStale = false;
+}
+
+function measureHosts() {
+  hostRects.clear();
+  const view = viewport();
+  for (const flood of floods) {
+    for (const layer of flood.layers) {
+      const host = layer.parentElement;
+      if (!(host instanceof HTMLElement) || hostRects.has(host)) continue;
+      const rect = layer.getBoundingClientRect();
+      if (rect.width > 0 && rect.bottom > 0 && rect.top < view.height) hostRects.set(host, rect);
+    }
+  }
+}
+
+function refreshGeometry() {
+  for (let i = 0; i < els.length; i++) rects[i] = els[i].getBoundingClientRect();
+  measureHosts();
+  rectsStale = false;
+}
 type Live = { text?: string; edge?: string; fill?: string; line?: string };
 const live = new Map<Element, Live>();
 
@@ -330,10 +382,17 @@ function buildLayers(tone: Tone) {
   return { hosts: hostList, layers };
 }
 
-type Sample = { color: string; bg: string; border: string; borderOn: boolean };
+type Sample = {
+  color: string;
+  bg: string;
+  border: string;
+  borderOn: boolean;
+  fill: string;
+  stroke: string;
+};
 
-function sampleStyle(el: Element): Sample {
-  const style = getComputedStyle(el);
+function sampleStyle(el: Element, style: CSSStyleDeclaration): Sample {
+  const svg = el instanceof SVGElement;
   return {
     color: style.color,
     bg: style.backgroundColor,
@@ -343,7 +402,26 @@ function sampleStyle(el: Element): Sample {
       parseFloat(style.borderRightWidth) > 0 ||
       parseFloat(style.borderBottomWidth) > 0 ||
       parseFloat(style.borderLeftWidth) > 0,
+    fill: svg ? style.fill : '',
+    stroke: svg ? style.stroke : '',
   };
+}
+
+function isSkipped(el: Element) {
+  return (
+    el.id === 'flood' ||
+    SKIP_TAGS.has(el.tagName) ||
+    !!el.closest('.katex-mathml') ||
+    !!el.closest('[hidden]') ||
+    !!el.closest('[data-flood-host]')
+  );
+}
+
+/** Arrival along the splash, without the lead. Two elements within FOLLOW_MS
+    of each other would overlap their fades anyway. */
+function waveAt(rect: DOMRect, cx: number, cy: number, Rmax: number) {
+  const dist = Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy);
+  return easeInv(Math.min(1, dist / Math.max(Rmax, 1))) * duration;
 }
 
 /** A fill or border is worth easing only when the two tones actually differ. */
@@ -353,35 +431,169 @@ function changed(now: string, next: string) {
   return !blank(now) || !blank(next);
 }
 
-/** Record each element's colors in both themes. An inherited color would
-    follow its parent; the element's own color changes when the paint reaches it. */
-function recordColors(current: Tone) {
+type Row = { el: Element; now: Sample; next: Sample; rect: DOMRect | null };
+
+function rememberPaint(el: Element, now: Sample, next: Sample, current: Tone, other: Tone) {
+  colors.set(el, { [current]: now.color, [other]: next.color } as Record<Tone, string>);
+  if (changed(now.bg, next.bg)) {
+    fills.set(el, { [current]: now.bg, [other]: next.bg } as Record<Tone, string>);
+  }
+  if ((now.borderOn || next.borderOn) && changed(now.border, next.border)) {
+    lines.set(el, { [current]: now.border, [other]: next.border } as Record<Tone, string>);
+  }
+}
+
+function themePaint(now: Sample, next: Sample) {
+  if (now.color !== next.color) return true;
+  if (changed(now.bg, next.bg)) return true;
+  if ((now.borderOn || next.borderOn) && changed(now.border, next.border)) return true;
+  if (changed(now.fill, next.fill) || changed(now.stroke, next.stroke)) return true;
+  return false;
+}
+
+/** Record colors for units and for the sliced header copies. One flip of
+    data-tone on the body restyles the page: custom properties inherit, so
+    each element does not need the attribute to be sampled. Descendants that
+    match a nearby unit become followers and are left out of the fade. */
+function recordColors(current: Tone, cx: number, cy: number, Rmax: number) {
   const other: Tone = current === 'dark' ? 'light' : 'dark';
-  recorded = [...els, ...hosts()];
-  const edged = recorded.filter((el) => el.classList.contains('iso-btn'));
-  const now = recorded.map(sampleStyle);
-  const nowEdge = edged.map((el) => getComputedStyle(el, '::before').color);
-  // Tones, not the root theme, so nothing keyed to the theme starts moving.
-  const toned = [document.body, ...recorded];
-  for (const el of toned) el.setAttribute('data-tone', other);
-  const flipped = recorded.map(sampleStyle);
+  const hostList = hosts();
+  const pending: { el: Element; now: Sample; rect: DOMRect | null }[] = [];
+  const nowBy = new Map<Element, Sample>();
+  const consider = (el: Element) => {
+    const style = getComputedStyle(el);
+    if (style.display === 'none') return;
+    const contents = style.display === 'contents';
+    const rect = contents ? null : el.getBoundingClientRect();
+    // A horizontal stroke has no height. Drop only boxes that paint nothing.
+    if (!contents && (rect === null || (rect.width < 1 && rect.height < 1))) return;
+    const now = sampleStyle(el, style);
+    nowBy.set(el, now);
+    pending.push({ el, now, rect });
+  };
+  const blankBg = (color: string) => color === 'transparent' || color === 'rgba(0, 0, 0, 0)';
+  // KaTeX never sets `color` (it inherits), so a span that matches its parent
+  // in this theme matches in the other one too. Skip the second style read.
+  const copyTone = (el: Element, now: Sample) => {
+    if (!(el instanceof HTMLElement) || !el.closest('.katex-html')) return false;
+    if (now.borderOn || !blankBg(now.bg)) return false;
+    let parent = el.parentElement;
+    let sample: Sample | undefined;
+    while (parent) {
+      sample = nowBy.get(parent);
+      if (sample) break;
+      parent = parent.parentElement;
+    }
+    return !!sample && sample.color === now.color;
+  };
+  consider(document.body);
+  for (const el of document.body.querySelectorAll<Element>('*')) {
+    if (!isSkipped(el)) consider(el);
+  }
+  for (const el of hostList) consider(el);
+
+  const edged = pending.filter((row) => row.el.classList.contains('iso-btn'));
+  const nowEdge = edged.map((row) => getComputedStyle(row.el, '::before').color);
+  // One tone on the body. Descendants inherit the tokens, so this samples the
+  // other theme without matching [data-tone] on every element.
+  document.body.setAttribute('data-tone', other);
+  const nextOf = new Map<Element, Sample>();
+  const deferred: Element[] = [];
+  for (const row of pending) {
+    if (copyTone(row.el, row.now)) {
+      deferred.push(row.el);
+      continue;
+    }
+    nextOf.set(row.el, sampleStyle(row.el, getComputedStyle(row.el)));
+  }
+  for (const el of deferred) {
+    const now = nowBy.get(el);
+    if (!now) continue;
+    let parent = el.parentElement;
+    let source: Sample | undefined;
+    while (parent) {
+      source = nextOf.get(parent);
+      if (source) break;
+      parent = parent.parentElement;
+    }
+    nextOf.set(el, source ? { ...now, color: source.color } : now);
+  }
   bgOf[other] = getComputedStyle(document.body).getPropertyValue('--bg').trim();
-  const flippedEdge = edged.map((el) => getComputedStyle(el, '::before').color);
-  for (const el of toned) el.setAttribute('data-tone', current);
-  bgOf[current] = getComputedStyle(document.body).getPropertyValue('--bg').trim();
+  const flippedEdge = edged.map((row) => getComputedStyle(row.el, '::before').color);
   document.body.removeAttribute('data-tone');
-  recorded.forEach((el, i) => {
-    colors.set(el, { [current]: now[i].color, [other]: flipped[i].color } as Record<Tone, string>);
-    if (changed(now[i].bg, flipped[i].bg)) {
-      fills.set(el, { [current]: now[i].bg, [other]: flipped[i].bg } as Record<Tone, string>);
-    }
-    if ((now[i].borderOn || flipped[i].borderOn) && changed(now[i].border, flipped[i].border)) {
-      lines.set(el, { [current]: now[i].border, [other]: flipped[i].border } as Record<Tone, string>);
-    }
+  bgOf[current] = getComputedStyle(document.body).getPropertyValue('--bg').trim();
+
+  const rows = new Map<Element, Row>();
+  for (const row of pending) {
+    const next = nextOf.get(row.el);
+    if (next) rows.set(row.el, { el: row.el, now: row.now, next, rect: row.rect });
+  }
+  const edgeChanged = new Set<Element>();
+  edged.forEach((row, i) => {
+    edges.set(row.el, { [current]: nowEdge[i], [other]: flippedEdge[i] } as Record<Tone, string>);
+    if (nowEdge[i] !== flippedEdge[i]) edgeChanged.add(row.el);
   });
-  edged.forEach((el, i) => {
-    edges.set(el, { [current]: nowEdge[i], [other]: flippedEdge[i] } as Record<Tone, string>);
-  });
+
+  const unitSet = new Set<Element>();
+  const units: Element[] = [];
+  const unitRects: DOMRect[] = [];
+  followers = [];
+  const hostSet = new Set<Element>(hostList);
+
+  const ancestorColors = (el: Element) => {
+    let parent = el.parentElement;
+    while (parent) {
+      const row = rows.get(parent);
+      if (row) return row;
+      parent = parent.parentElement;
+    }
+    return rows.get(document.body) ?? null;
+  };
+  const nearestUnit = (el: Element) => {
+    let parent = el.parentElement;
+    while (parent) {
+      if (unitSet.has(parent)) return parent;
+      parent = parent.parentElement;
+    }
+    return null;
+  };
+
+  for (const row of pending) {
+    const next = nextOf.get(row.el);
+    if (!next || row.rect === null || hostSet.has(row.el) || row.el === document.body) continue;
+    const bgChanges = changed(row.now.bg, next.bg);
+    const borderChanges =
+      (row.now.borderOn || next.borderOn) && changed(row.now.border, next.border);
+    const ownFace = bgChanges || borderChanges || edgeChanged.has(row.el);
+    if (!ownFace && !themePaint(row.now, next)) continue;
+
+    const parent = ancestorColors(row.el);
+    const colorDiffers =
+      !parent || row.now.color !== parent.now.color || next.color !== parent.next.color;
+    const unit = nearestUnit(row.el);
+    const unitRect = unit ? (rows.get(unit)?.rect ?? null) : null;
+    const near =
+      unitRect !== null &&
+      Math.abs(waveAt(row.rect, cx, cy, Rmax) - waveAt(unitRect, cx, cy, Rmax)) <= FOLLOW_MS;
+    if (!ownFace && !colorDiffers && near) {
+      followers.push(row.el);
+      continue;
+    }
+    unitSet.add(row.el);
+    units.push(row.el);
+    unitRects.push(row.rect);
+    rememberPaint(row.el, row.now, next, current, other);
+  }
+
+  for (const el of hostList) {
+    const row = rows.get(el);
+    if (row) rememberPaint(el, row.now, row.next, current, other);
+  }
+
+  els = units;
+  rects = unitRects;
+  recorded = [...units, ...hostList];
+  for (const el of recorded) el.setAttribute('data-tone', current);
 }
 
 /** Pin the color already on screen, before the theme flips, so a parent
@@ -390,9 +602,21 @@ function lockColors(tone: Tone) {
   for (const el of recorded) {
     const pair = colors.get(el);
     if (!pair) continue;
-    const { style } = el as HTMLElement;
-    if (!priorColor.has(el)) priorColor.set(el, style.getPropertyValue('color'));
-    style.setProperty('color', pair[tone]);
+    if (!(el instanceof HTMLElement || el instanceof SVGElement)) continue;
+    if (!priorColor.has(el)) priorColor.set(el, el.style.getPropertyValue('color'));
+    el.style.setProperty('color', pair[tone]);
+  }
+}
+
+/** Followers take the unit's animated color. An inline color of their own
+    would keep the token and snap when the root theme flips. KaTeX and SVG
+    geometry already inherit, so writing `color` on each one only restyles. */
+function pinFollowers() {
+  for (const el of followers) {
+    if (!(el instanceof HTMLElement)) continue;
+    if (el.closest('.katex-html') || el.closest('svg')) continue;
+    if (!priorColor.has(el)) priorColor.set(el, el.style.getPropertyValue('color'));
+    el.style.setProperty('color', 'inherit');
   }
 }
 
@@ -421,31 +645,56 @@ function fadeColor(el: Element, from: string, to: string, pseudoElement?: string
   trackFade({ anim, el: el as HTMLElement, kind: pseudoElement ? 'edge' : 'text' });
 }
 
-/** A registered custom property, animated on the main thread. The from value is
-    written in the same task as the attribute, so the first frame is the color
-    already showing and never the property's transparent initial value. */
-function fadePaint(el: HTMLElement, kind: 'fill' | 'line', from: string, to: string) {
-  const prop = kind === 'fill' ? '--flood-bg' : '--flood-border';
-  const attr = kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
-  if (from === to) {
-    el.removeAttribute(attr);
-    el.style.removeProperty(prop);
-    return;
+/** Ease text, fill, and border in one animation. The custom properties are set
+    in the same task as the tone, so the first frame is the color already
+    showing and never the property's transparent initial value. Unchanged
+    fills are not in the maps: `changed` drops a pair that is transparent in
+    both tones. */
+function fadeTogether(el: HTMLElement, tone: Tone, showing: Tone, sample?: Live) {
+  const pair = colors.get(el);
+  const fill = fills.get(el);
+  const line = lines.get(el);
+  const from: Record<string, string> = {};
+  const to: Record<string, string> = {};
+  if (pair) {
+    const startColor = sample?.text ?? pair[showing];
+    const endColor = pair[tone];
+    if (startColor !== endColor) {
+      from.color = startColor;
+      to.color = endColor;
+    }
   }
-  el.style.setProperty(prop, from);
-  el.setAttribute(attr, '');
-  const frames: Keyframe[] = [{ [prop]: from }, { [prop]: to }];
-  const anim = el.animate(frames, { duration: fadeMs, easing: 'ease', fill: 'forwards' });
-  trackFade({ anim, el, kind });
+  if (fill) {
+    const startColor = sample?.fill ?? fill[showing];
+    const endColor = fill[tone];
+    if (startColor !== endColor) {
+      el.style.setProperty('--flood-bg', startColor);
+      el.setAttribute('data-flood-fill', '');
+      from['--flood-bg'] = startColor;
+      to['--flood-bg'] = endColor;
+    }
+  }
+  if (line) {
+    const startColor = sample?.line ?? line[showing];
+    const endColor = line[tone];
+    if (startColor !== endColor) {
+      el.style.setProperty('--flood-border', startColor);
+      el.setAttribute('data-flood-line', '');
+      from['--flood-border'] = startColor;
+      to['--flood-border'] = endColor;
+    }
+  }
+  if (!Object.keys(from).length) return;
+  const anim = el.animate([from, to], { duration: fadeMs, easing: 'ease', fill: 'forwards' });
+  const paints = '--flood-bg' in from || '--flood-border' in from;
+  trackFade({ anim, el, kind: paints ? 'paint' : 'text' });
 }
 
 /** Move this element to the tone now under it. Hosts snap; the clipped copy already shows the destination. */
 function paint(el: Element, tone: Tone, snap = false, sample?: Live) {
   const pair = colors.get(el);
   const edge = edges.get(el);
-  const fill = fills.get(el);
-  const line = lines.get(el);
-  const showing = el.getAttribute('data-tone') === 'dark' ? 'dark' : 'light';
+  const showing: Tone = el.getAttribute('data-tone') === 'dark' ? 'dark' : 'light';
   const node = el as HTMLElement;
   if (snap) {
     dropFades(el);
@@ -456,10 +705,8 @@ function paint(el: Element, tone: Tone, snap = false, sample?: Live) {
     if (pair) node.style.setProperty('color', pair[tone]);
   } else {
     dropFades(el);
-    if (pair) fadeColor(el, sample?.text ?? pair[showing], pair[tone]);
+    fadeTogether(node, tone, showing, sample);
     if (edge) fadeColor(el, sample?.edge ?? edge[showing], edge[tone], '::before');
-    if (fill) fadePaint(node, 'fill', sample?.fill ?? fill[showing], fill[tone]);
-    if (line) fadePaint(node, 'line', sample?.line ?? line[showing], line[tone]);
   }
   if (el.getAttribute('data-tone') !== tone) el.setAttribute('data-tone', tone);
   arrived.add(el);
@@ -476,14 +723,16 @@ function releaseFinished() {
     let write = 0;
     for (let i = 0; i < list.length; i++) {
       const fade = list[i];
-      if (
-        (fade.kind === 'fill' || fade.kind === 'line') &&
-        fade.anim.playState === 'finished'
-      ) {
-        const prop = fade.kind === 'fill' ? '--flood-bg' : '--flood-border';
-        const attr = fade.kind === 'fill' ? 'data-flood-fill' : 'data-flood-line';
-        fade.el.removeAttribute(attr);
-        fade.el.style.removeProperty(prop);
+      if (fade.kind === 'paint' && fade.anim.playState === 'finished') {
+        const pair = colors.get(fade.el);
+        const tone = fade.el.getAttribute('data-tone') === 'dark' ? 'dark' : 'light';
+        // The shared animation also holds the text color. Pin that before
+        // canceling, or the pre-splash inline color flashes back.
+        if (pair) fade.el.style.setProperty('color', pair[tone]);
+        fade.el.removeAttribute('data-flood-fill');
+        fade.el.removeAttribute('data-flood-line');
+        fade.el.style.removeProperty('--flood-bg');
+        fade.el.style.removeProperty('--flood-border');
         fade.anim.cancel();
         continue;
       }
@@ -497,7 +746,7 @@ function releaseFinished() {
 function fillsOpen() {
   for (const list of fades.values()) {
     for (const fade of list) {
-      if ((fade.kind === 'fill' || fade.kind === 'line') && fade.anim.playState !== 'finished') {
+      if (fade.kind === 'paint' && fade.anim.playState !== 'finished') {
         return true;
       }
     }
@@ -519,7 +768,16 @@ function clearTones() {
     style.removeProperty('--flood-border');
     if (!el.getAttribute('style')) el.removeAttribute('style');
   }
+  for (const el of followers) {
+    if (!(el instanceof HTMLElement || el instanceof SVGElement) || !priorColor.has(el)) continue;
+    const previous = priorColor.get(el);
+    if (previous) el.style.setProperty('color', previous);
+    else el.style.removeProperty('color');
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  }
   els = [];
+  rects = [];
+  followers = [];
   shown = [];
   recorded = [];
   colors = new Map();
@@ -561,6 +819,7 @@ function settle() {
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
   tail = false;
+  unwatchViewport();
   root.classList.remove('flooding');
   root.style.removeProperty('color-scheme');
   stopFades();
@@ -604,6 +863,7 @@ function offscreen(rect: DOMRect, viewW: number, viewH: number) {
 function tick(now: number) {
   raf = 0;
   if (!ctx) return;
+  if (rectsStale) refreshGeometry();
 
   jobCount = 0;
   for (let i = 0; i < els.length; i++) {
@@ -623,20 +883,11 @@ function tick(now: number) {
       jobCount++;
     }
   }
-  // Styles first, then every rect, then writes. One recalc and one layout.
+  // Reads before writes. Rects come from the splash start unless the page moved.
   readLive();
-  for (let i = 0; i < jobCount; i++) jobs[i].rect = jobs[i].el.getBoundingClientRect();
+  for (let i = 0; i < jobCount; i++) jobs[i].rect = rects[jobs[i].i] ?? null;
 
   const view = viewport();
-  hostRects.clear();
-  for (const flood of floods) {
-    for (const layer of flood.layers) {
-      const host = layer.parentElement;
-      if (!(host instanceof HTMLElement) || hostRects.has(host)) continue;
-      const rect = layer.getBoundingClientRect();
-      if (rect.width > 0 && rect.bottom > 0 && rect.top < view.height) hostRects.set(host, rect);
-    }
-  }
 
   for (const flood of floods) {
     const t = Math.min(1, Math.max(0, (now - flood.start) / duration));
@@ -708,9 +959,6 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     // Colors are recorded below with no flood transitions running.
     settle();
     markTitles();
-    els = [...document.body.querySelectorAll<Element>('*:not(#flood)')].filter(
-      (el) => !el.closest('[data-flood-host]'),
-    );
     duration = ms('--dur-flood', 1200);
     fadeMs = ms('--dur-flood-fade', 250);
   }
@@ -721,20 +969,13 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const view = viewport();
   const far = Math.hypot(Math.max(cx, view.width - cx), Math.max(cy, view.height - cy));
   const Rmax = far * cover;
-  const lead = ms('--dur-flood-lead', 120);
-  const start = performance.now();
-  const arr = els.map((el) => {
-    const rect = el.getBoundingClientRect();
-    const dist = Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy);
-    return start + Math.max(0, easeInv(Math.min(1, dist / Rmax)) * duration - lead);
-  });
   const oldBg = fresh ? getComputedStyle(document.body).backgroundColor : null;
 
   fit();
   if (fresh) {
     floorTone = root.dataset.theme === 'dark' ? 'dark' : 'light';
     if (oldBg) setFloor(oldBg);
-    recordColors(floorTone);
+    recordColors(floorTone, cx, cy, Rmax);
     shown = new Array<Tone>(els.length).fill(floorTone);
     // Changing the root color-scheme mid-fade makes Chromium restart every
     // inherited color transition on each frame, so text crawls and icons flicker.
@@ -743,7 +984,16 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     // after that flip: if it is already on, Chromium eases from the new theme
     // back to this pinned color.
     lockColors(floorTone);
+    pinFollowers();
+  } else {
+    for (let i = 0; i < els.length; i++) rects[i] = els[i].getBoundingClientRect();
   }
+  const lead = ms('--dur-flood-lead', 120);
+  const start = performance.now();
+  const arr = rects.map((rect) => {
+    const dist = Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy);
+    return start + Math.max(0, easeInv(Math.min(1, dist / Rmax)) * duration - lead);
+  });
   commit(next);
   if (fresh) {
     void root.offsetWidth;
@@ -769,5 +1019,7 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     rIn: 0,
     rOut: 0,
   });
+  measureHosts();
+  watchViewport();
   if (!raf) raf = requestAnimationFrame(tick);
 }
