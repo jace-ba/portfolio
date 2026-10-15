@@ -142,8 +142,29 @@ function measureHosts() {
   }
 }
 
+/** The box the splash uses to time an element. A KaTeX radical is one path
+    with a bar hundreds of ems long, clipped to the mark. The geometry box
+    ignores that clip, so its center sits far to the right and the fade
+    starts late. */
+function paintedBox(el: Element): DOMRect | null {
+  const rect = el.getBoundingClientRect();
+  if (!(el instanceof SVGGeometryElement)) return rect;
+  const svg = el.ownerSVGElement;
+  if (!svg) return rect;
+  const box = svg.getBoundingClientRect();
+  const left = Math.max(rect.left, box.left);
+  const top = Math.max(rect.top, box.top);
+  const right = Math.min(rect.right, box.right);
+  const bottom = Math.min(rect.bottom, box.bottom);
+  if (right - left < 1 || bottom - top < 1) return null;
+  return new DOMRect(left, top, right - left, bottom - top);
+}
+
 function refreshGeometry() {
-  for (let i = 0; i < els.length; i++) rects[i] = els[i].getBoundingClientRect();
+  for (let i = 0; i < els.length; i++) {
+    const box = paintedBox(els[i]);
+    if (box) rects[i] = box;
+  }
   measureHosts();
   rectsStale = false;
 }
@@ -464,7 +485,7 @@ function recordColors(current: Tone, cx: number, cy: number, Rmax: number) {
     const style = getComputedStyle(el);
     if (style.display === 'none') return;
     const contents = style.display === 'contents';
-    const rect = contents ? null : el.getBoundingClientRect();
+    const rect = contents ? null : paintedBox(el);
     // A horizontal stroke has no height. Drop only boxes that paint nothing.
     if (!contents && (rect === null || (rect.width < 1 && rect.height < 1))) return;
     const now = sampleStyle(el, style);
@@ -986,7 +1007,10 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     lockColors(floorTone);
     pinFollowers();
   } else {
-    for (let i = 0; i < els.length; i++) rects[i] = els[i].getBoundingClientRect();
+    for (let i = 0; i < els.length; i++) {
+      const box = paintedBox(els[i]);
+      if (box) rects[i] = box;
+    }
   }
   const lead = ms('--dur-flood-lead', 120);
   const start = performance.now();
