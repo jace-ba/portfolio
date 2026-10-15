@@ -3,6 +3,7 @@ import '../styles/tokens.css';
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import { Font } from 'astro:assets';
+import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 
 interface Props {
@@ -15,6 +16,8 @@ const {
   description = 'Portfolio of Jace Baptista-Allan.',
 } = Astro.props;
 const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const showFooter = path !== '/about';
 ---
 
 <!doctype html>
@@ -45,7 +48,10 @@ const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
     <a class="skip-link" href="#main">Skip to content</a>
     <SiteHeader />
     <main id="main" class="container">
-      <slot />
+      <div class="main-content">
+        <slot />
+      </div>
+      {showFooter && <SiteFooter />}
     </main>
   </body>
 </html>
@@ -56,7 +62,15 @@ const fullTitle = title ? `${title} · Jace` : 'Jace · Portfolio';
 
 <style>
   main {
-    padding-block: var(--space-8);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--space-8);
+    padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  }
+
+  .main-content {
+    flex: 1;
   }
 
   main:global(.page-enter) {

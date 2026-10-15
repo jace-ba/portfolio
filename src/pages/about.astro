@@ -1,7 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Icon from '../components/Icon.astro';
+import ContactLinks from '../components/ContactLinks.astro';
 import GeometryPuzzle from '../components/GeometryPuzzle.astro';
 import QuoteOfTheWeek from '../components/QuoteOfTheWeek.astro';
 import profilePhoto from '../assets/profile-photo.jpg';
@@ -110,26 +110,7 @@ const openTo = [
           ))
         }
       </dl>
-      <ul class="links">
-        <li>
-          <a href="mailto:jacedba@gmail.com">
-            <span class="mail"><Icon name="mail" size={20} /></span>
-            jacedba@gmail.com
-          </a>
-        </li>
-        <li>
-          <a href="https://www.linkedin.com/in/jacedba/" target="_blank" rel="noopener noreferrer">
-            <Icon name="linkedin" size={20} />
-            linkedin.com/in/jacedba/
-          </a>
-        </li>
-        <li>
-          <a href="https://app.joinhandshake.com/profiles/jacedba" target="_blank" rel="noopener noreferrer">
-            <Icon name="handshake" size={20} />
-            app.joinhandshake.com/profiles/jacedba
-          </a>
-        </li>
-      </ul>
+      <ContactLinks />
     </section>
   </div>
 </BaseLayout>
@@ -199,42 +180,6 @@ const openTo = [
 
   .fact dd {
     margin: 0;
-  }
-
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .links li {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .links li:not(:last-child)::after {
-    content: "·";
-    color: var(--muted);
-    font-size: var(--text-lg);
-    line-height: 1;
-  }
-
-  .links a {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-lg);
-    overflow-wrap: anywhere;
-  }
-
-  .mail {
-    display: flex;
-    color: var(--ink);
   }
 
   @media (max-width: 800px) {
