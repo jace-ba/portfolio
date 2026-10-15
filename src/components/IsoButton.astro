@@ -50,10 +50,11 @@ const Tag = href ? 'a' : 'button';
 <style>
   /* Registered so it can transition; the face offset and the side-face
      length are both derived from it, which keeps the base fixed on every
-     frame, including spring overshoot. */
+     frame, including spring overshoot. It inherits so the hit plate, a
+     pseudo-element, follows the same animated value as the face. */
   @property --press {
     syntax: '<number>';
-    inherits: false;
+    inherits: true;
     initial-value: 0;
   }
 
@@ -120,8 +121,26 @@ const Tag = href ? 'a' : 'button';
     transition: --press var(--dur-release) var(--ease-spring);
   }
 
+  /* The face slides toward its seat as --press rises, so a pointer on the
+     top edge would otherwise miss mouseup after the press animation. This
+     plate stays on the resting face — same size and radius — and keeps that
+     pointer on the control. It is not painted. A seated face does not travel. */
+  .iso-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    transform: translate(
+      calc(var(--dx) - var(--r) * sin(var(--theta))),
+      calc(var(--dy) - var(--r) * cos(var(--theta)))
+    );
+  }
+  .iso-btn.is-pressed::after {
+    content: none;
+  }
+
   @media (hover: hover) {
-    .iso-hole:hover .iso-btn:not(:active):not(.is-pressed) {
+    .iso-btn:hover:not(:active):not(.is-pressed) {
       --press: 0.35;
       background: var(--btn-bg-hover);
     }
