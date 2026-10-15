@@ -2,10 +2,8 @@
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import IsoButton from '../../components/IsoButton.astro';
-import IsoTile from '../../components/IsoTile.astro';
 import Icon from '../../components/Icon.astro';
 import ProjectMeta from '../../components/ProjectMeta.astro';
-import Placeholder from '../../components/Placeholder.astro';
 import { getMainProjects } from '../../lib/projects';
 
 export async function getStaticPaths() {
@@ -70,21 +68,14 @@ const filled = hasWriteUp || (documents?.length ?? 0) > 0;
       }
     </header>
 
-    {!filled && <IsoTile accent={accent} size="hero" />}
-
     {
-      hasWriteUp ? (
+      hasWriteUp && (
         <div class="prose">
           <Content />
         </div>
-      ) : (
-        !filled && (
-          <div class="prose">
-            <Placeholder label="Write-up" />
-          </div>
-        )
       )
     }
+    {!filled && <p class="unfinished">This page isn't finished yet! More info is coming soon.</p>}
 
     {
       next.id !== project.id && (
@@ -148,6 +139,11 @@ const filled = hasWriteUp || (documents?.length ?? 0) > 0;
   /* Stays on the right when the pair wraps onto two rows. */
   .project-nav > :global(:last-child) {
     margin-left: auto;
+  }
+
+  .unfinished {
+    max-width: 68ch;
+    color: var(--muted);
   }
 
   .prose {
