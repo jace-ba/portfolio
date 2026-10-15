@@ -4,7 +4,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import IsoButton from '../../components/IsoButton.astro';
 import IsoTile from '../../components/IsoTile.astro';
 import Icon from '../../components/Icon.astro';
-import Tag from '../../components/Tag.astro';
+import ProjectMeta from '../../components/ProjectMeta.astro';
 import Placeholder from '../../components/Placeholder.astro';
 import { getMainProjects } from '../../lib/projects';
 
@@ -21,9 +21,10 @@ export async function getStaticPaths() {
 }
 
 const { project, prev, next } = Astro.props;
-const { title, summary, category, stack, accent, year } = project.data;
+const { title, summary, category, stack, accent, year, ongoing, documents } = project.data;
 const { Content } = await render(project);
 const hasWriteUp = !!project.body?.trim();
+const filled = hasWriteUp || (documents?.length ?? 0) > 0;
 ---
 
 <BaseLayout title={title} description={summary}>
@@ -36,20 +37,54 @@ const hasWriteUp = !!project.body?.trim();
     </div>
 
     <header class="intro">
-      <h1>{title}</h1>
-      <p class="lede">{summary}</p>
-      <div class="tags">
-        <Tag accent={accent}>{category}</Tag>
-        <Tag>{stack}</Tag>
-        {year != null && <Tag>{year}</Tag>}
+      <div class="heading">
+        <h1>{title}</h1>
+        <ProjectMeta year={year} ongoing={ongoing} category={category} stack={stack} accent={accent} />
       </div>
+      <p class="lede">{summary}</p>
+      {
+        documents && documents.length > 0 && (
+          <div class="documents">
+            {documents.map((doc) => (
+              <div class="document">
+                {doc.preview && (
+                  <a class="preview" href={doc.href} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={doc.preview.src}
+                      alt={doc.preview.alt}
+                      width={doc.preview.width}
+                      height={doc.preview.height}
+                    />
+                    <span class="visually-hidden">(opens in a new tab)</span>
+                  </a>
+                )}
+                <IsoButton href={doc.href} target="_blank" rel="noopener noreferrer">
+                  {doc.label}
+                  <Icon name="external" />
+                  <span class="visually-hidden">(opens in a new tab)</span>
+                </IsoButton>
+              </div>
+            ))}
+          </div>
+        )
+      }
     </header>
 
-    <IsoTile accent={accent} size="hero" />
+    {!filled && <IsoTile accent={accent} size="hero" />}
 
-    <div class="prose">
-      {hasWriteUp ? <Content /> : <Placeholder label="Write-up" />}
-    </div>
+    {
+      hasWriteUp ? (
+        <div class="prose">
+          <Content />
+        </div>
+      ) : (
+        !filled && (
+          <div class="prose">
+            <Placeholder label="Write-up" />
+          </div>
+        )
+      )
+    }
 
     {
       next.id !== project.id && (
@@ -69,10 +104,39 @@ const hasWriteUp = !!project.body?.trim();
 </BaseLayout>
 
 <style>
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
+  .heading {
+    display: grid;
     gap: var(--space-2);
+    justify-items: start;
+  }
+
+  .documents {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  .document {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+  }
+
+  .preview {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    line-height: 0;
+  }
+
+  .preview img {
+    width: 100%;
+    height: auto;
   }
 
   .project-nav {

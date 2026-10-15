@@ -2,14 +2,14 @@
 import type { CollectionEntry } from 'astro:content';
 import IsoTile from './IsoTile.astro';
 import Icon from './Icon.astro';
-import Tag from './Tag.astro';
+import ProjectMeta from './ProjectMeta.astro';
 
 interface Props {
   project: CollectionEntry<'projects'>;
 }
 
 const { project } = Astro.props;
-const { title, summary, category, stack, accent, kind, href } = project.data;
+const { title, summary, category, stack, accent, year, ongoing, kind, href } = project.data;
 const small = kind === 'small';
 /* A small build without a link yet renders as a plain card, not a dead link. */
 const Wrapper = small && !href ? 'div' : 'a';
@@ -27,11 +27,8 @@ const linkProps = small
       {title}
       {small && href && <Icon name="external" size={18} class="external" />}
     </h3>
+    <ProjectMeta year={year} ongoing={ongoing} category={category} stack={stack} accent={accent} />
     <p>{summary}</p>
-    <div class="tags">
-      <Tag accent={accent}>{category}</Tag>
-      <Tag>{stack}</Tag>
-    </div>
   </div>
 </Wrapper>
 
@@ -78,12 +75,5 @@ const linkProps = small
     margin-left: var(--space-1);
     vertical-align: -0.15em;
     color: var(--muted);
-  }
-
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    margin-top: var(--space-1);
   }
 </style>

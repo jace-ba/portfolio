@@ -5,6 +5,7 @@ category: Simulation
 stack: C# · Unity
 accent: azure
 year: 2025
+ongoing: true
 order: 1
 featured: true
 ---

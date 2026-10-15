@@ -4,6 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ContactLinks from '../components/ContactLinks.astro';
 import GeometryPuzzle from '../components/GeometryPuzzle.astro';
 import QuoteOfTheWeek from '../components/QuoteOfTheWeek.astro';
+import pinballCannon from '../assets/pinball-cannon.jpg';
 import profilePhoto from '../assets/profile-photo.jpg';
 
 const openTo = [
@@ -30,7 +31,7 @@ const openTo = [
       <div class="intro">
         <h1>Jace Baptista-Allan</h1>
         <p class="role">
-          Computer Science and Physics student at the University of Washington
+          Computer Science and Physics student at the University of Washington.
         </p>
         <p class="lede">
           Born and raised in Seattle, I build VR physics simulations at UW. I build to understand, then
@@ -39,22 +40,29 @@ const openTo = [
       </div>
     </section>
 
-    <section class="section" aria-labelledby="origin">
+    <section class="section origin" aria-labelledby="origin">
       <h2 id="origin">How I got here</h2>
       <div class="copy">
-        <p>
-          I first fell in love with computer science and physics at the same time, during a middle
-          school science fair project. Armed with an Arduino, servo motors, and a pinball shooter I
-          scavenged at a garage sale, I constructed a pinball cannon and built a trajectory prediction
-          program with Berkeley’s Snap! that could adjust the launch angle to fire the pinball a target
-          distance. And despite my improvised materials, it actually worked.
-        </p>
-        <p>
-          Physics asks you what’s true underneath a system, and computer science lets you turn that
-          model into something other people can use. During my time tutoring physics and building labs
-          for VR, I’ve seen how much the right tool changes what people can grasp.
-        </p>
+          <p>
+            I fell in love with computer science and physics during a middle
+            school science fair project. Armed with an Arduino, servo motors, and a spring from a pinball machine,
+            I constructed a pinball cannon and programmed a trajectory solver
+            that adjusted the cannon's angle to shoot the pinball a target
+            distance. Despite my improvised materials, it actually worked.
+          </p>
+          <p>
+            Physics asks you what’s true underneath a system, and computer science lets you turn that
+            model into something other people can use. During my time tutoring physics and building labs
+            for VR, I’ve seen how much the right tool changes what people can grasp.
+          </p>
       </div>
+      <Image
+        src={pinballCannon}
+        alt="Jace in seventh grade holding the pinball cannon in front of his science-fair poster"
+        widths={[360, 720]}
+        sizes="(max-width: 800px) min(100vw, 360px), 360px"
+        class="cannon"
+      />
     </section>
 
     <section class="section" aria-labelledby="work">
@@ -83,8 +91,8 @@ const openTo = [
       <h2 id="outside">Outside the lab</h2>
       <div class="copy">
         <p>
-          I’ve played drums for 13 years, and I’ve been making 3D animations since 7th grade (fun fact:
-          when I was 13, I made a video intro for PewDiePie and he used it!). I also like building
+          I’ve played drums since I was 7, and I’ve been making 3D animations since 7th grade (fun fact:
+          when I was 14, I made a video intro for PewDiePie and he used it!). I also like building
           custom keyboards. Right now, I’m working on machining a keyboard case out of some walnut wood.
         </p>
         <p>
@@ -142,6 +150,25 @@ const openTo = [
     max-width: 65ch;
   }
 
+  .origin {
+    grid-template-columns: minmax(0, 1fr) min(360px, 42%);
+    column-gap: var(--space-7);
+  }
+
+  .origin h2,
+  .origin .copy {
+    grid-column: 1;
+  }
+
+  .origin :global(.cannon) {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-xl);
+  }
+
   .now {
     display: grid;
     gap: var(--space-2);
@@ -187,6 +214,14 @@ const openTo = [
       grid-template-columns: 1fr;
     }
     .bio-row :global(.portrait) {
+      max-width: 360px;
+    }
+    .origin {
+      grid-template-columns: 1fr;
+    }
+    .origin :global(.cannon) {
+      grid-column: 1;
+      grid-row: auto;
       max-width: 360px;
     }
   }
