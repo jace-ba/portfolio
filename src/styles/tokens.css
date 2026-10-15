@@ -48,6 +48,10 @@
   --tangerine-ink: #a85500;
   --gold-label: #1e1400;
   --gold-ink: #8c6800;
+  /* Puzzle formulas and diagram marks. The scarlet and azure fills are below
+     4.5:1 on --surface, so scarlet uses its edge and the second color uses azure ink. */
+  --scarlet-figure: var(--scarlet-edge);
+  --azure-figure: var(--azure-ink);
 
   --neutral-edge: color-mix(in oklch, var(--neutral) 76%, black);
 
@@ -88,6 +92,8 @@
   --scarlet-ink: #fb6b66;
   --tangerine-ink: var(--tangerine);
   --gold-ink: var(--gold);
+  --scarlet-figure: var(--scarlet-ink);
+  --azure-figure: var(--azure);
 
   --azure-mark: var(--azure);
   --scarlet-mark: var(--scarlet);
