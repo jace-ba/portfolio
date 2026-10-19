@@ -1,11 +1,12 @@
 ---
-title: VR physics labs
-summary: Interactive VR simulations of undergraduate physics experiments, used in introductory and advanced courses at UW and WSU.
-category: Simulation
-stack: C# · Unity
+title: VR physics software
+summary: Developer for UW's NOMR; Interactive VR simulations used in official physics course labs at UW and WSU.
 accent: azure
 year: 2025
 ongoing: true
 order: 1
 featured: true
+documents:
+  - label: NOMR
+    href: https://nomr.uw.edu/
 ---

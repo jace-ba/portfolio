@@ -1,8 +1,6 @@
 ---
 title: This portfolio
-summary: A small design system of tactile isometric buttons, theme splashes, and page swaps that never interrupt the header.
-category: Design
-stack: Astro
+summary: A small Astro design system of tactile isometric buttons, theme splashes, and page swaps that never interrupt the header.
 accent: tangerine
 year: 2026
 order: 4
@@ -10,9 +8,7 @@ order: 4
 
 ## Isometric buttons
 
-### The idea
-
-Most buttons are flat rectangles that change color on hover. I wanted buttons that feel like physical keys: they have depth, they lean toward your cursor, and they snap down when you press them.
+I wanted buttons that feel like tactile keys: they have depth, they have a responsive tilt based on cursor position, and they snap down when you press them.
 
 ### How it works
 
@@ -31,3 +27,7 @@ A pressed button should stay perfectly still. While it's seated, the tilt layer 
 ### Result
 
 The buttons are used across this site: the navigation tiles, the theme toggle, and every call to action.
+
+## Theme toggle
+
+Of course, light and dark theme options are great for any computer. But the instant transition can be a little harsh for eyes, so I built and optimized a smooth splash that propagates through the screen and fades each on-screen element it touches to the target color.

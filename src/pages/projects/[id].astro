@@ -19,10 +19,10 @@ export async function getStaticPaths() {
 }
 
 const { project, prev, next } = Astro.props;
-const { title, summary, category, stack, accent, year, ongoing, documents } = project.data;
+const { title, summary, year, ongoing, documents } = project.data;
 const { Content } = await render(project);
 const hasWriteUp = !!project.body?.trim();
-const filled = hasWriteUp || (documents?.length ?? 0) > 0;
+const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
 ---
 
 <BaseLayout title={title} description={summary}>
@@ -37,7 +37,7 @@ const filled = hasWriteUp || (documents?.length ?? 0) > 0;
     <header class="intro">
       <div class="heading">
         <h1>{title}</h1>
-        <ProjectMeta year={year} ongoing={ongoing} category={category} stack={stack} accent={accent} />
+        <ProjectMeta year={year} ongoing={ongoing} />
       </div>
       <p class="lede">{summary}</p>
       {
@@ -56,11 +56,19 @@ const filled = hasWriteUp || (documents?.length ?? 0) > 0;
                     <span class="visually-hidden">(opens in a new tab)</span>
                   </a>
                 )}
-                <IsoButton href={doc.href} target="_blank" rel="noopener noreferrer">
-                  {doc.label}
-                  <Icon name="external" />
-                  <span class="visually-hidden">(opens in a new tab)</span>
-                </IsoButton>
+                {doc.caption && (
+                  <a class="caption" href={doc.href} target="_blank" rel="noopener noreferrer">
+                    {doc.caption}
+                    <span class="visually-hidden">(opens in a new tab)</span>
+                  </a>
+                )}
+                {doc.label && (
+                  <IsoButton href={doc.href} target="_blank" rel="noopener noreferrer">
+                    {doc.label}
+                    <Icon name="external" />
+                    <span class="visually-hidden">(opens in a new tab)</span>
+                  </IsoButton>
+                )}
               </div>
             ))}
           </div>
@@ -128,6 +136,12 @@ const filled = hasWriteUp || (documents?.length ?? 0) > 0;
   .preview img {
     width: 100%;
     height: auto;
+  }
+
+  .caption {
+    max-width: 68ch;
+    color: var(--link);
+    text-underline-offset: 0.2em;
   }
 
   .project-nav {

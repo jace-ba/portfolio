@@ -9,10 +9,7 @@ const projects = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string(),
-    /** Shown as the accent-colored tag. */
-    category: z.string(),
-    /** Shown as the neutral tag. */
-    stack: z.string(),
+    /** Tile color on the project card. */
     accent: z.enum(accents),
     /** Optional so small builds with no single date can leave it out. */
     year: z.number().int().optional(),
@@ -29,9 +26,12 @@ const projects = defineCollection({
     documents: z
       .array(
         z.object({
-          label: z.string(),
-          href: z.string().startsWith('/'),
-          /** First-page image shown above the link. */
+          /** Button label. Omitted when a caption is the link. */
+          label: z.string().optional(),
+          /** Shown under a preview and linked with it. */
+          caption: z.string().optional(),
+          href: z.union([z.string().startsWith('/'), z.url()]),
+          /** Image shown above the link. */
           preview: z
             .object({
               src: z.string().startsWith('/'),
@@ -40,6 +40,8 @@ const projects = defineCollection({
               height: z.number().int().positive(),
             })
             .optional(),
+        }).refine((doc) => Boolean(doc.label || doc.caption), {
+          message: 'A document needs a label or a caption',
         }),
       )
       .optional(),

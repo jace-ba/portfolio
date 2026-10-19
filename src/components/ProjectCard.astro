@@ -9,7 +9,7 @@ interface Props {
 }
 
 const { project } = Astro.props;
-const { title, summary, category, stack, accent, year, ongoing, kind, href } = project.data;
+const { title, summary, accent, year, ongoing, kind, href } = project.data;
 const small = kind === 'small';
 /* A small build without a link yet renders as a plain card, not a dead link. */
 const Wrapper = small && !href ? 'div' : 'a';
@@ -27,7 +27,7 @@ const linkProps = small
       {title}
       {small && href && <Icon name="external" size={18} class="external" />}
     </h3>
-    <ProjectMeta year={year} ongoing={ongoing} category={category} stack={stack} accent={accent} />
+    <ProjectMeta year={year} ongoing={ongoing} />
     <p>{summary}</p>
   </div>
 </Wrapper>
