@@ -20,8 +20,10 @@
 [data-tone="light"] {
   --bg: #f6f1ea;
   --surface: #fffaf3;
-  /* Same step as a button face, toward black. A light card darkens on hover. */
-  --surface-hover: oklch(from var(--surface) calc(l - var(--hover-lift)) c h);
+  /* The card sits just above the page, so a button-sized step down from the
+     card lands on the page and the card disappears. Step down from the page
+     instead, by the same amount a button face lightens. */
+  --surface-hover: oklch(from var(--bg) calc(l - var(--hover-lift)) c h);
   --surface-sunken: #efe7dc;
   --line: #e4d9cb;
   --ink: #2a2420;

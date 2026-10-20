@@ -59,6 +59,10 @@ const linkProps = small
     text-decoration: none;
     transition: background-color var(--dur-release) var(--ease-press);
   }
+  /* The splash eases this fill itself. Leave the hover fade off until it ends. */
+  :global(html.flooding) .card {
+    transition: none;
+  }
   a.card:active,
   a.card:focus-visible {
     background: var(--surface-hover);

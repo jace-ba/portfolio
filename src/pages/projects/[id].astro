@@ -149,6 +149,9 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
     pointer-events: none;
     transition: opacity var(--dur-release) var(--ease-press);
   }
+  :global(html.flooding) .preview::after {
+    transition: none;
+  }
   .preview:active::after,
   .preview:focus-visible::after {
     opacity: 0.08;
