@@ -42,6 +42,7 @@ const Tag = href ? 'a' : 'button';
     aria-pressed={!href && pressed ? 'true' : undefined}
     {...rest}
   >
+    <span class="iso-face" aria-hidden="true"></span>
     <slot />
   </Tag>
   {mark && <span class="nav-mark" aria-hidden="true"></span>}
@@ -118,11 +119,20 @@ const Tag = href ? 'a' : 'button';
     -webkit-tap-highlight-color: transparent;
     position: relative;
     transform: translate(calc(-1 * var(--dx)), calc(var(--r) - var(--dy)));
-    /* Face color fades on hover. It is listed apart from --press so the
-       spring on the seat does not overshoot the color. */
-    transition:
-      --press var(--dur-release) var(--ease-spring),
-      background-color var(--dur-release) var(--ease-press);
+    transition: --press var(--dur-release) var(--ease-spring);
+  }
+
+  /* Hover wash. Opacity, not the face background: the splash animates that
+     background itself, and a background transition starts apart from the base. */
+  .iso-face {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--btn-bg-hover);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-release) var(--ease-press);
   }
 
   /* The face slides toward its seat as --press rises, so a pointer on the
@@ -146,21 +156,26 @@ const Tag = href ? 'a' : 'button';
   @media (hover: hover) {
     .iso-btn:hover:not(:active):not(.is-pressed) {
       --press: 0.35;
-      background: var(--btn-bg-hover);
+    }
+    .iso-btn:hover:not(:active):not(.is-pressed) .iso-face {
+      opacity: 1;
     }
   }
 
-  /* Seat on --press alone. Keeping the face-color fade in this list restarts
-     it from the resting color when the press begins. */
   .iso-btn:active,
   .iso-btn.is-pressed {
     --press: 1;
     transition: --press var(--dur-press) var(--ease-press);
   }
+  /* The wash ends as the face seats, instead of easing out after it has landed. */
+  .iso-btn:active .iso-face,
+  .iso-btn.is-pressed .iso-face {
+    opacity: 0;
+    transition: none;
+  }
 
-  /* The splash eases the face on its own animation. A background transition
-     here would restart from the old color when the tone flips. Press timing
-     stays on --press, and the extrusion shadow is not transitioned. */
+  /* Keep the press timing. Face color eases on its own animation, not here,
+     so a press cannot restart it. The extrusion shadow is not transitioned. */
   :global(html.flooding) .iso-btn {
     transition: --press var(--dur-release) var(--ease-spring);
   }
