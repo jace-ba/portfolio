@@ -2,6 +2,7 @@
 title: ExploraVision national finalist
 summary: A hypothetical cancer treatment technology, presented through a co-authored paper, a website, a prototype, and a 3D animation. One of 6 national finalists.
 accent: scarlet
+thumbnail: ../../assets/exploravision-thumb.png
 year: 2023
 order: 6
 documents:
