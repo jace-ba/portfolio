@@ -4,6 +4,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import IsoButton from '../../components/IsoButton.astro';
 import Icon from '../../components/Icon.astro';
 import ProjectMeta from '../../components/ProjectMeta.astro';
+import StyleSheet from '../../components/StyleSheet.astro';
 import { getProjects } from '../../lib/projects';
 
 export async function getStaticPaths() {
@@ -87,6 +88,7 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
       }
     </header>
 
+    {project.id === 'this-portfolio' && <StyleSheet />}
     {
       hasWriteUp && (
         <div class="prose">

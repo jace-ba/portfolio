@@ -1,0 +1,242 @@
+---
+import IsoButton from './IsoButton.astro';
+import Icon from './Icon.astro';
+import ThemeToggle from './ThemeToggle.astro';
+import { isCurrentPath, navItems } from '../lib/nav';
+
+const accents = ['azure', 'scarlet', 'tangerine', 'gold'] as const;
+const variants = ['neutral', ...accents] as const;
+const neutrals = [
+  { name: 'Surface', token: 'surface' },
+  { name: 'Sunken', token: 'surface-sunken' },
+  { name: 'Neutral', token: 'neutral' },
+] as const;
+const radii = [
+  { name: 'Small', token: 'sm' },
+  { name: 'Medium', token: 'md' },
+  { name: 'Large', token: 'lg' },
+  { name: 'Extra large', token: 'xl' },
+] as const;
+---
+
+<section class="sheet" aria-labelledby="style-sheet">
+  <div class="intro">
+    <h2 id="style-sheet">Style sheet</h2>
+  </div>
+
+  <div class="group">
+    <h3>Theme</h3>
+    <div class="row">
+      <ThemeToggle />
+      <p class="callout">
+        <Icon name="arrowLeft" />
+        Try me!
+      </p>
+    </div>
+  </div>
+
+  <div class="group">
+    <h3>Color</h3>
+    <p class="note">Each accent is a fill, a lighter hover, and a darker edge.</p>
+    <div class="accents">
+      {
+        accents.map((accent) => (
+          <div class="accent">
+            <div class="fill" style={`background: var(--${accent})`} />
+            <div class="pair">
+              <div class="half" style={`background: var(--${accent}-hover)`} />
+              <div class="half" style={`background: var(--${accent}-edge)`} />
+            </div>
+            <p class="label">{accent}</p>
+          </div>
+        ))
+      }
+    </div>
+    <div class="neutrals">
+      {
+        neutrals.map((neutral) => (
+          <div class="neutral">
+            <div class="fill fill--short" style={`background: var(--${neutral.token})`} />
+            <p class="label">{neutral.name}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="group">
+    <h3>Buttons</h3>
+    <div class="row">
+      {variants.map((variant) => <IsoButton variant={variant}>{variant}</IsoButton>)}
+    </div>
+    <div class="row row--nav" data-radio-group>
+      {
+        navItems.map((item) => (
+          <IsoButton
+            size="square"
+            variant={item.variant}
+            mark
+            pressed={isCurrentPath(item.href, Astro.url.pathname)}
+            data-radio
+          >
+            {item.label}
+          </IsoButton>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="group">
+    <h3>Type</h3>
+    <p class="display">A heading in Rubik</p>
+    <p>Body text for reading, set in the same family.</p>
+    <p class="muted">Secondary text, in the muted color.</p>
+  </div>
+
+  <div class="group">
+    <h3>Corners</h3>
+    <div class="radii">
+      {
+        radii.map((radius) => (
+          <div class="radius" style={`border-radius: var(--radius-${radius.token})`}>
+            {radius.name}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .sheet {
+    display: grid;
+    gap: var(--space-6);
+    width: 100%;
+  }
+
+  .intro,
+  .group {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+  }
+
+  .note,
+  .muted {
+    color: var(--muted);
+  }
+
+  .display {
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    letter-spacing: -0.01em;
+  }
+
+  .accents,
+  .neutrals,
+  .radii {
+    display: grid;
+    gap: var(--space-4);
+    width: 100%;
+  }
+
+  .accents {
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  }
+
+  .neutrals {
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  }
+
+  .radii {
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    text-transform: capitalize;
+  }
+
+  /* Room for the dot under the seated square, same placement as the header. */
+  .row--nav {
+    --hdr-pad-block: var(--space-5);
+    padding-bottom: var(--hdr-pad-block);
+  }
+
+  .row--nav :global(button.iso-btn[aria-pressed='true']) {
+    cursor: default;
+  }
+
+  .callout {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+    text-transform: none;
+  }
+
+  .accent,
+  .neutral {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .fill {
+    height: 5.5rem;
+    border-radius: var(--radius-md);
+  }
+  .fill--short {
+    height: 4rem;
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+  }
+  .half {
+    height: 1.75rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+  }
+
+  .radius {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    height: 5.5rem;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+
+</style>
+
+<script>
+  // One square stays seated, the way the header nav does. These do not navigate.
+  document.querySelectorAll<HTMLElement>('[data-radio-group]').forEach((group) => {
+    group.addEventListener('click', (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest<HTMLElement>('[data-radio]') : null;
+      if (!button || !group.contains(button)) return;
+      group.querySelectorAll<HTMLElement>('[data-radio]').forEach((el) => {
+        const on = el === button;
+        el.classList.toggle('is-pressed', on);
+        el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        el.closest('.iso-hole')?.classList.toggle('is-current', on);
+      });
+    });
+  });
+</script>
