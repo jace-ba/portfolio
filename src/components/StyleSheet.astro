@@ -22,7 +22,7 @@ const radii = [
 <section class="sheet" aria-labelledby="style-sheet">
   <div class="intro">
     <h2 id="style-sheet">Style sheet</h2>
-    <div class="row">
+    <div class="theme">
       <ThemeToggle />
       <p class="callout">
         <Icon name="arrowLeft" />
@@ -83,13 +83,6 @@ const radii = [
   </div>
 
   <div class="group">
-    <h3>Type</h3>
-    <p class="display">A heading in Rubik</p>
-    <p>Body text for reading, set in the same family.</p>
-    <p class="muted">Secondary text, in the muted color.</p>
-  </div>
-
-  <div class="group">
     <h3>Corners</h3>
     <div class="radii">
       {
@@ -100,6 +93,13 @@ const radii = [
         ))
       }
     </div>
+  </div>
+
+  <div class="group">
+    <h3>Type</h3>
+    <p class="display">A heading in Rubik</p>
+    <p>Body text for reading, set in the same family.</p>
+    <p class="muted">Secondary text, in the muted color.</p>
   </div>
 </section>
 
@@ -168,12 +168,26 @@ const radii = [
     cursor: default;
   }
 
+  /* Equal side columns keep the button on the center line. The label sits in the right column. */
+  .theme {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+  }
+  .theme > :global(:first-child) {
+    grid-column: 2;
+  }
+
   .callout {
+    justify-self: start;
+    margin-left: var(--space-3);
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
     font-weight: 600;
     text-transform: none;
+    white-space: nowrap;
   }
 
   .accent,
