@@ -1,9 +1,10 @@
 ---
 title: This portfolio
-summary: A small Astro design system of tactile isometric buttons, theme splashes, and page swaps that never interrupt the header.
+summary: A small Astro design system by me.
 accent: tangerine
 year: 2026
 order: 4
+featured: true
 ---
 
 ## Isometric buttons

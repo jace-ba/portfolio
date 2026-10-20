@@ -4,5 +4,4 @@ summary: A multithreaded C++ HTTP server with concurrent socket I/O, serving a f
 accent: scarlet
 year: 2026
 order: 3
-featured: true
 ---
