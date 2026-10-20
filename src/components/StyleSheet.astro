@@ -2,7 +2,7 @@
 import IsoButton from './IsoButton.astro';
 import Icon from './Icon.astro';
 import ThemeToggle from './ThemeToggle.astro';
-import { isCurrentPath, navItems } from '../lib/nav';
+import { isCurrentPage, isCurrentPath, navItems } from '../lib/nav';
 
 const accents = ['azure', 'scarlet', 'tangerine', 'gold'] as const;
 const variants = ['neutral', ...accents] as const;
@@ -76,7 +76,8 @@ const radii = [
             size="square"
             variant={item.variant}
             mark
-            pressed={isCurrentPath(item.href, Astro.url.pathname)}
+            pressed={isCurrentPage(item.href, Astro.url.pathname)}
+            current={isCurrentPath(item.href, Astro.url.pathname)}
             data-radio
           >
             {item.label}

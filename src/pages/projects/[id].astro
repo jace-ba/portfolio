@@ -36,13 +36,6 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
 
 <BaseLayout title={title} description={summary}>
   <article class="page">
-    <div>
-      <IsoButton href="/projects">
-        <Icon name="arrowLeft" />
-        All projects
-      </IsoButton>
-    </div>
-
     <header class="intro">
       <div class="heading">
         <h1>{title}</h1>
@@ -98,20 +91,25 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
     }
     {!filled && <p class="unfinished">This page isn't finished yet! More info is coming soon.</p>}
 
-    {
-      next.id !== project.id && (
-        <nav class="project-nav" aria-label="More projects">
+    <nav class:list={['project-nav', { 'project-nav--solo': next.id === project.id }]} aria-label="More projects">
+      {
+        next.id !== project.id && (
           <IsoButton href={`/projects/${prev.id}`}>
             <Icon name="arrowLeft" />
             Previous project
           </IsoButton>
+        )
+      }
+      <IsoButton href="/projects">All projects</IsoButton>
+      {
+        next.id !== project.id && (
           <IsoButton href={`/projects/${next.id}`}>
             Next project
             <Icon name="arrowRight" />
           </IsoButton>
-        </nav>
-      )
-    }
+        )
+      }
+    </nav>
   </article>
 </BaseLayout>
 
@@ -201,14 +199,43 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
   }
 
   .project-nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: var(--space-2);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-3) var(--space-2);
   }
-  /* Stays on the right when the pair wraps onto two rows. */
+  .project-nav > :global(:first-child) {
+    justify-self: start;
+  }
+  .project-nav > :global(:nth-child(2)) {
+    justify-self: center;
+  }
   .project-nav > :global(:last-child) {
-    margin-left: auto;
+    justify-self: end;
+  }
+  .project-nav--solo {
+    grid-template-columns: 1fr;
+  }
+  .project-nav--solo > :global(:first-child) {
+    justify-self: center;
+  }
+  /* Three nowrap buttons overflow a phone width, so the parent sits above the pair. */
+  @media (max-width: 700px) {
+    .project-nav:not(.project-nav--solo) {
+      grid-template-columns: 1fr 1fr;
+    }
+    .project-nav:not(.project-nav--solo) > :global(:nth-child(2)) {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
+    .project-nav:not(.project-nav--solo) > :global(:first-child) {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .project-nav:not(.project-nav--solo) > :global(:last-child) {
+      grid-column: 2;
+      grid-row: 2;
+    }
   }
 
   .unfinished {

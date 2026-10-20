@@ -4,7 +4,14 @@ export const navItems = [
   { href: '/about', label: 'About me', icon: 'person', variant: 'gold' },
 ] as const;
 
-/** Whether a nav link should be seated for the given pathname (sub-routes included). */
+/** The link's own page. Child routes are not seated, so the button can still be pressed. */
+export function isCurrentPage(href: string, pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  const target = href.replace(/\/+$/, '') || '/';
+  return path === target;
+}
+
+/** The link's section, including sub-routes. Home matches only the index. */
 export function isCurrentPath(href: string, pathname: string): boolean {
   const path = pathname.replace(/\/+$/, '') || '/';
   return href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
