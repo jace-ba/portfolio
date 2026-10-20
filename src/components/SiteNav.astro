@@ -1,7 +1,7 @@
 ---
 import IsoButton from './IsoButton.astro';
 import Icon from './Icon.astro';
-import { navItems, isCurrentPage, isCurrentPath } from '../lib/nav';
+import { navItems, isCurrentPage } from '../lib/nav';
 ---
 
 <nav class="site-nav" aria-label="Main">
@@ -13,7 +13,6 @@ import { navItems, isCurrentPage, isCurrentPath } from '../lib/nav';
         variant={item.variant}
         mark
         pressed={isCurrentPage(item.href, Astro.url.pathname)}
-        current={isCurrentPath(item.href, Astro.url.pathname)}
       >
         <Icon name={item.icon} />
         {item.label}
@@ -35,7 +34,7 @@ import { navItems, isCurrentPage, isCurrentPath } from '../lib/nav';
 </style>
 
 <script>
-  import { isCurrentPage, isCurrentPath } from '../lib/nav';
+  import { isCurrentPage } from '../lib/nav';
 
   // The header stays in the document across navigations (see page-swap.ts),
   // so the seated button is updated here instead of being re-rendered.
@@ -55,7 +54,7 @@ import { navItems, isCurrentPage, isCurrentPath } from '../lib/nav';
   function placeDot(pathname: string) {
     document.querySelectorAll<HTMLElement>('.site-nav .iso-hole').forEach((hole) => {
       const link = hole.querySelector('a.iso-btn');
-      const current = isCurrentPath(link?.getAttribute('href') ?? '', pathname);
+      const current = isCurrentPage(link?.getAttribute('href') ?? '', pathname);
       hole.classList.toggle('is-current', current);
     });
   }

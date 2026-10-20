@@ -13,14 +13,8 @@ interface Props extends Omit<HTMLAttributes<'button'>, 'class'> {
   size?: Size;
   /** Seated in the fully-pressed position (current page, active toggle). */
   pressed?: boolean;
-  /** A dot under the hole, in the button's color. */
+  /** A dot under the hole while the button is seated, in the button's color. */
   mark?: boolean;
-  /**
-   * Whether that dot is showing. Defaults to `pressed` when omitted, so a
-   * seated button keeps its dot. Pass true on a raised button to mark the
-   * section without seating the key.
-   */
-  current?: boolean;
   /** Applied to the outer wrapper, for layout. */
   class?: string;
 }
@@ -31,17 +25,15 @@ const {
   size = 'pill',
   pressed = false,
   mark = false,
-  current,
   class: className,
   type,
   ...rest
 } = Astro.props;
 
 const Tag = href ? 'a' : 'button';
-const marked = current ?? pressed;
 ---
 
-<span class:list={['iso-hole', className, { 'is-current': mark && marked }]}>
+<span class:list={['iso-hole', className, { 'is-current': mark && pressed }]}>
   <Tag
     class:list={['iso-btn', `iso-btn--${size}`, `iso-btn--${variant}`, { 'is-pressed': pressed }]}
     href={href}

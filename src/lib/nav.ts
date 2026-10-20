@@ -10,9 +10,3 @@ export function isCurrentPage(href: string, pathname: string): boolean {
   const target = href.replace(/\/+$/, '') || '/';
   return path === target;
 }
-
-/** The link's section, including sub-routes. Home matches only the index. */
-export function isCurrentPath(href: string, pathname: string): boolean {
-  const path = pathname.replace(/\/+$/, '') || '/';
-  return href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
-}
