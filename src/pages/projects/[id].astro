@@ -124,6 +124,7 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
   }
 
   .preview {
+    position: relative;
     display: block;
     width: 100%;
     overflow: hidden;
@@ -136,6 +137,26 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
   .preview img {
     width: 100%;
     height: auto;
+  }
+
+  /* Darkens the picture on hover and stays there while the pointer is down. */
+  .preview::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: black;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-release) var(--ease-press);
+  }
+  .preview:active::after,
+  .preview:focus-visible::after {
+    opacity: 0.08;
+  }
+  @media (hover: hover) {
+    .preview:hover::after {
+      opacity: 0.08;
+    }
   }
 
   .caption {

@@ -20,6 +20,8 @@
 [data-tone="light"] {
   --bg: #f6f1ea;
   --surface: #fffaf3;
+  /* Same step as a button face, toward black. A light card darkens on hover. */
+  --surface-hover: oklch(from var(--surface) calc(l - var(--hover-lift)) c h);
   --surface-sunken: #efe7dc;
   --line: #e4d9cb;
   --ink: #2a2420;
@@ -84,6 +86,8 @@
 [data-tone="dark"] {
   --bg: #1a1816;
   --surface: #24211e;
+  /* Same step as a button face, toward white. A dark card lightens on hover. */
+  --surface-hover: oklch(from var(--surface) calc(l + var(--hover-lift)) c h);
   --surface-sunken: #141210;
   --line: #34302b;
   --ink: #efe9e2;
