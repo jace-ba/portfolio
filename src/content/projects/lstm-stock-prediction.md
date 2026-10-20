@@ -7,15 +7,13 @@ year: 2026
 order: 2
 featured: true
 documents:
-  - label: Report
-    href: /projects/lstm-stock-prediction/report.pdf
+  - href: /projects/lstm-stock-prediction/report.pdf
     preview:
       src: /projects/lstm-stock-prediction/report-preview.png
       alt: First page of the report
       width: 1800
       height: 2329
-  - label: Poster
-    href: /projects/lstm-stock-prediction/poster.pdf
+  - href: /projects/lstm-stock-prediction/poster.pdf
     preview:
       src: /projects/lstm-stock-prediction/poster-preview.png
       alt: The project poster

@@ -28,7 +28,7 @@ const projects = defineCollection({
     documents: z
       .array(
         z.object({
-          /** Button label. Omitted when a caption is the link. */
+          /** Button label. Omitted when the preview or a caption is the link. */
           label: z.string().optional(),
           /** Button color. Omitted buttons stay neutral. */
           variant: z.enum(accents).optional(),
@@ -44,8 +44,8 @@ const projects = defineCollection({
               height: z.number().int().positive(),
             })
             .optional(),
-        }).refine((doc) => Boolean(doc.label || doc.caption), {
-          message: 'A document needs a label or a caption',
+        }).refine((doc) => Boolean(doc.label || doc.caption || doc.preview), {
+          message: 'A document needs a label, a caption, or a preview',
         }),
       )
       .optional(),
