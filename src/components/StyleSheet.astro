@@ -226,17 +226,27 @@ const radii = [
 
 <script>
   // One square stays seated, the way the header nav does. These do not navigate.
-  document.querySelectorAll<HTMLElement>('[data-radio-group]').forEach((group) => {
-    group.addEventListener('click', (event) => {
-      const target = event.target;
-      const button = target instanceof Element ? target.closest<HTMLElement>('[data-radio]') : null;
-      if (!button || !group.contains(button)) return;
-      group.querySelectorAll<HTMLElement>('[data-radio]').forEach((el) => {
-        const on = el === button;
-        el.classList.toggle('is-pressed', on);
-        el.setAttribute('aria-pressed', on ? 'true' : 'false');
-        el.closest('.iso-hole')?.classList.toggle('is-current', on);
+  // The module runs once, so a group that arrives in a later page swap is bound here.
+  const boundGroups = new WeakSet<HTMLElement>();
+
+  function bindRadios() {
+    document.querySelectorAll<HTMLElement>('[data-radio-group]').forEach((group) => {
+      if (boundGroups.has(group)) return;
+      boundGroups.add(group);
+      group.addEventListener('click', (event) => {
+        const target = event.target;
+        const button = target instanceof Element ? target.closest<HTMLElement>('[data-radio]') : null;
+        if (!button || !group.contains(button)) return;
+        group.querySelectorAll<HTMLElement>('[data-radio]').forEach((el) => {
+          const on = el === button;
+          el.classList.toggle('is-pressed', on);
+          el.setAttribute('aria-pressed', on ? 'true' : 'false');
+          el.closest('.iso-hole')?.classList.toggle('is-current', on);
+        });
       });
     });
-  });
+  }
+
+  bindRadios();
+  document.addEventListener('astro:page-load', bindRadios);
 </script>

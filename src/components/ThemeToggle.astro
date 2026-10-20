@@ -32,7 +32,9 @@ import Icon from './Icon.astro';
 
   const root = document.documentElement;
   const media = matchMedia('(prefers-color-scheme: dark)');
-  const toggles = document.querySelectorAll<HTMLElement>('[data-theme-toggle]');
+  // This module runs once. The header toggle stays in the document; a toggle
+  // inside a swapped page is a new element and still needs a listener.
+  const bound = new WeakSet<HTMLElement>();
 
   const readStored = () => {
     try {
@@ -45,21 +47,28 @@ import Icon from './Icon.astro';
   function apply(theme: 'light' | 'dark') {
     root.dataset.theme = theme;
     const next = theme === 'dark' ? 'light' : 'dark';
-    toggles.forEach((t) => t.setAttribute('aria-label', `Switch to ${next} theme`));
+    document.querySelectorAll<HTMLElement>('[data-theme-toggle]').forEach((t) => {
+      t.setAttribute('aria-label', `Switch to ${next} theme`);
+    });
+  }
+
+  function bindToggles() {
+    document.querySelectorAll<HTMLElement>('[data-theme-toggle]').forEach((t) => {
+      if (bound.has(t)) return;
+      bound.add(t);
+      t.addEventListener('click', () => {
+        floodTo(t, (next) => {
+          apply(next);
+          try {
+            localStorage.setItem('theme', next);
+          } catch {}
+        });
+      });
+    });
   }
 
   apply(root.dataset.theme === 'dark' ? 'dark' : 'light');
-
-  toggles.forEach((t) =>
-    t.addEventListener('click', () => {
-      floodTo(t, (next) => {
-        apply(next);
-        try {
-          localStorage.setItem('theme', next);
-        } catch {}
-      });
-    }),
-  );
+  bindToggles();
 
   media.addEventListener('change', (e) => {
     if (!readStored()) apply(e.matches ? 'dark' : 'light');
@@ -70,5 +79,10 @@ import Icon from './Icon.astro';
   document.addEventListener('astro:before-swap', (e) => {
     endFlood();
     e.newDocument.documentElement.dataset.theme = root.dataset.theme;
+  });
+
+  document.addEventListener('astro:page-load', () => {
+    apply(root.dataset.theme === 'dark' ? 'dark' : 'light');
+    bindToggles();
   });
 </script>
