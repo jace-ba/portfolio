@@ -215,6 +215,7 @@
   --scarlet-tint: color-mix(in oklab, var(--scarlet) 16%, var(--surface));
   --tangerine-tint: color-mix(in oklab, var(--tangerine) 16%, var(--surface));
   --gold-tint: color-mix(in oklab, var(--gold) 16%, var(--surface));
+  --neutral-tint: color-mix(in oklab, var(--neutral) 16%, var(--surface));
 
   --primary: var(--azure);
   --link: var(--azure-ink);

@@ -1,7 +1,8 @@
 ---
 title: LSTM stock prediction
-summary: Scientific experiment and paper on prediction of daily S&P 500 price direction with an LSTM in PyTorch.
+summary: Scientific experiment and paper on LSTM prediction of daily stock price movement in PyTorch.
 accent: gold
+thumbnail: ../../assets/lstm-thumb.png
 year: 2026
 order: 2
 featured: true

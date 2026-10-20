@@ -53,6 +53,9 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
                       width={doc.preview.width}
                       height={doc.preview.height}
                     />
+                    <span class="preview-mark">
+                      <Icon name="external" size={20} />
+                    </span>
                     <span class="visually-hidden">(opens in a new tab)</span>
                   </a>
                 )}
@@ -122,16 +125,23 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
     gap: var(--space-3);
     justify-items: start;
   }
+  /* One picture would otherwise stretch across the whole page. */
+  .document:only-child {
+    max-width: 36rem;
+  }
 
   .preview {
+    --preview-dim: 0.08;
     position: relative;
     display: block;
     width: 100%;
     overflow: hidden;
-    border: 1px solid var(--line);
     border-radius: var(--radius-md);
     background: var(--surface);
     line-height: 0;
+  }
+  :global(:root[data-theme='dark']) .preview {
+    --preview-dim: 0.16;
   }
 
   .preview img {
@@ -139,10 +149,25 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
     height: auto;
   }
 
+  .preview-mark {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    pointer-events: none;
+  }
+
   /* Darkens the picture on hover and stays there while the pointer is down. */
   .preview::after {
     content: '';
     position: absolute;
+    z-index: 0;
     inset: 0;
     background: black;
     opacity: 0;
@@ -151,11 +176,11 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
   }
   .preview:active::after,
   .preview:focus-visible::after {
-    opacity: 0.08;
+    opacity: var(--preview-dim);
   }
   @media (hover: hover) {
     .preview:hover::after {
-      opacity: 0.08;
+      opacity: var(--preview-dim);
     }
   }
 
