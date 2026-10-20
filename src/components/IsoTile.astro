@@ -1,6 +1,5 @@
 ---
-/* Placeholder artwork: an isometric tile on an accent tint. Swap for real
-   images once project screenshots exist. */
+/* Card preview. An isometric tile until a project has a thumbnail. */
 interface Props {
   accent: 'azure' | 'scarlet' | 'tangerine' | 'gold';
   size?: 'card' | 'hero' | 'portrait';
@@ -11,11 +10,11 @@ const { accent, size = 'card', class: className } = Astro.props;
 ---
 
 <div
-  class:list={['thumb', `thumb--${size}`, className]}
+  class:list={['thumb', `thumb--${size}`, className, { 'thumb--image': Astro.slots.has('default') }]}
   style={`--thumb-bg: var(--${accent}-tint); --tile: var(--${accent}); --tile-edge: var(--${accent}-edge);`}
   aria-hidden="true"
 >
-  <div class="tile"></div>
+  {Astro.slots.has('default') ? <slot /> : <div class="tile"></div>}
 </div>
 
 <style>
@@ -24,6 +23,15 @@ const { accent, size = 'card', class: className } = Astro.props;
     place-items: center;
     background: var(--thumb-bg);
     border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .thumb--image {
+    place-items: stretch;
+  }
+  .thumb--image :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   .thumb--card { height: 188px; }
   .thumb--hero { height: clamp(220px, 32vw, 360px); border-radius: var(--radius-xl); }

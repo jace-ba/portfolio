@@ -1,5 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
 import IsoTile from './IsoTile.astro';
 import Icon from './Icon.astro';
 import ProjectMeta from './ProjectMeta.astro';
@@ -9,7 +10,7 @@ interface Props {
 }
 
 const { project } = Astro.props;
-const { title, summary, accent, year, ongoing, kind, href } = project.data;
+const { title, summary, accent, year, ongoing, kind, href, thumbnail } = project.data;
 const small = kind === 'small';
 /* A small build without a link yet renders as a plain card, not a dead link. */
 const Wrapper = small && !href ? 'div' : 'a';
@@ -21,7 +22,21 @@ const linkProps = small
 ---
 
 <Wrapper class:list={['card', { 'card--small': small }]} {...linkProps}>
-  {!small && <IsoTile accent={accent} />}
+  {
+    !small &&
+      (thumbnail ? (
+        <IsoTile accent={accent}>
+          <Image
+            src={thumbnail}
+            alt=""
+            widths={[400, 800]}
+            sizes="(max-width: 700px) 100vw, 400px"
+          />
+        </IsoTile>
+      ) : (
+        <IsoTile accent={accent} />
+      ))
+  }
   <div class="body">
     <h3>
       {title}
@@ -42,6 +57,16 @@ const linkProps = small
     background: var(--surface);
     color: inherit;
     text-decoration: none;
+    transition: background-color var(--dur-release) var(--ease-press);
+  }
+  a.card:active,
+  a.card:focus-visible {
+    background: var(--surface-hover);
+  }
+  @media (hover: hover) {
+    a.card:hover {
+      background: var(--surface-hover);
+    }
   }
   .card:focus-visible {
     border-radius: var(--radius-lg);

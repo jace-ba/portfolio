@@ -6,11 +6,13 @@ export const accents = ['azure', 'scarlet', 'tangerine', 'gold'] as const;
 
 const projects = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
-  schema: z.object({
+  schema: ({ image }) => z.object({
     title: z.string(),
     summary: z.string(),
-    /** Tile color on the project card. */
+    /** Tile color on the project card, and the fallback when there is no thumbnail. */
     accent: z.enum(accents),
+    /** Card image. A path relative to the Markdown file, processed by Astro. */
+    thumbnail: image().optional(),
     /** Optional so small builds with no single date can leave it out. */
     year: z.number().int().optional(),
     /** With a start year, the line reads "2025–now" instead of a single year. */
