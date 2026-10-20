@@ -23,7 +23,9 @@ const linkProps =
 <Wrapper class:list={['card', { 'card--small': small }]} {...linkProps}>
   {
     !small &&
-      (thumbnail ? (
+      (project.id === 'this-portfolio' ? (
+        <IsoTile accent={accent} nav />
+      ) : thumbnail ? (
         <IsoTile accent={accent}>
           <Image
             src={thumbnail}

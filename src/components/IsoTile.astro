@@ -4,17 +4,32 @@ interface Props {
   accent: 'azure' | 'scarlet' | 'tangerine' | 'gold';
   size?: 'card' | 'hero' | 'portrait';
   class?: string;
+  /** Three blank squares in the nav colors, on the page background. */
+  nav?: boolean;
 }
 
-const { accent, size = 'card', class: className } = Astro.props;
+const { accent, size = 'card', class: className, nav = false } = Astro.props;
+const navColors = ['scarlet', 'tangerine', 'gold'] as const;
 ---
 
 <div
-  class:list={['thumb', `thumb--${size}`, className, { 'thumb--image': Astro.slots.has('default') }]}
+  class:list={['thumb', `thumb--${size}`, className, { 'thumb--image': Astro.slots.has('default'), 'thumb--nav': nav }]}
   style={`--thumb-bg: var(--${accent}-tint); --tile: var(--${accent}); --tile-edge: var(--${accent}-edge);`}
   aria-hidden="true"
 >
-  {Astro.slots.has('default') ? <slot /> : <div class="tile"></div>}
+  {
+    nav ? (
+      <div class="nav-row">
+        {navColors.map((color) => (
+          <div class="tile tile--square" style={`--tile: var(--${color}); --tile-edge: var(--${color}-edge)`} />
+        ))}
+      </div>
+    ) : Astro.slots.has('default') ? (
+      <slot />
+    ) : (
+      <div class="tile" />
+    )
+  }
 </div>
 
 <style>
@@ -39,6 +54,25 @@ const { accent, size = 'card', class: className } = Astro.props;
     min-height: 0;
     object-fit: cover;
     object-position: center;
+  }
+  .thumb.thumb--nav {
+    background: var(--bg);
+  }
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding-inline: var(--space-3);
+  }
+  .tile.tile--square {
+    flex: 1 1 0;
+    width: auto;
+    max-width: 88px;
+    min-width: 0;
+    height: auto;
+    aspect-ratio: 1;
   }
   .thumb--card { height: 188px; }
   .thumb--hero { height: clamp(220px, 32vw, 360px); border-radius: var(--radius-xl); }
