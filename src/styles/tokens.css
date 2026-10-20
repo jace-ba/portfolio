@@ -1,11 +1,12 @@
 /* Design tokens. Light (warm) is the default; dark overrides neutrals, the
-   accent adjustment, and accent ink. The same overrides are also declared on
-   [data-tone] so the theme flood can recolor one element at a time. Derived
-   accents are declared on [data-tone] too, because a custom property inherits
-   already resolved: a child that only overrides the knobs would keep the
-   parent's computed fill. See docs/design-spec.md. Re-check WCAG AA if any
-   accent value changes: labels on fills (4.5:1), each ink on --bg, --surface,
-   and its tint (4.5:1), and each edge on --bg and --surface (3:1). */
+   accent bases, the accent adjustment, and accent ink. The same overrides are
+   also declared on [data-tone] so the theme flood can recolor one element at
+   a time. Derived accents are declared on [data-tone] too, because a custom
+   property inherits already resolved: a child that only overrides the knobs
+   would keep the parent's computed fill. See docs/design-spec.md. Re-check
+   WCAG AA if any accent value changes: labels on fills (4.5:1), each ink on
+   --bg, --surface, and its tint (4.5:1), and each edge on --bg and --surface
+   (3:1). */
 
 :root {
   color-scheme: light;
@@ -28,20 +29,36 @@
   --neutral-hover: #ebe3d8;
   --neutral-ink: #3a322c;
 
-  /* How accents sit on this theme's background. On a light page saturated
-     fills read heavier and deep shadows read harsh, so fills are lifted and
-     softened, and edges stay closer to their fill. Edges are capped so they
-     still clear 3:1 against the page. */
-  --accent-lift: 0.03;
-  --accent-chroma: 0.85;
+  /* Light fills are these bases, shown as given. They were chosen for the
+     warm page, so they are not a lift of the dark fills. Hover and edge still
+     come from the knobs. Edges are capped so they still clear 3:1 against
+     the page. */
+  --accent-lift: 0;
+  --accent-chroma: 1;
   --hover-lift: 0.03;
   --hover-chroma: 0.9;
   --edge-depth: 0.8;
   --edge-chroma: 0.88;
   --edge-max-l: 0.63;
 
+  /* #278aec, #ea5b54, #f79c56, #f9c957 read as Display P3, which is the color
+     this panel shows for those hexes. Stored in OKLCH so a color-managed
+     browser paints that color; an sRGB screen gets the nearest in-gamut color. */
+  --azure-l: 0.6268;
+  --azure-c: 0.1919;
+  --azure-h: 246.92;
+  --scarlet-l: 0.6701;
+  --scarlet-c: 0.2128;
+  --scarlet-h: 25.18;
+  --tangerine-l: 0.7798;
+  --tangerine-c: 0.1634;
+  --tangerine-h: 53.74;
+  --gold-l: 0.8598;
+  --gold-c: 0.161;
+  --gold-h: 84.16;
+
   --azure-label: #051727;
-  --azure-ink: #006eaf;
+  --azure-ink: #006aab;
   --scarlet-label: #250e0d;
   --scarlet-ink: #b83c3b;
   --tangerine-label: #241104;
@@ -78,7 +95,7 @@
   /* a lighter mix than the accents so the edge still separates from --surface */
   --neutral-edge: color-mix(in oklch, var(--neutral) 80%, black);
 
-  /* the base colors, unadjusted */
+  /* Shown as given: #1b9ff6, #fc4f4f, #fc8d31, #fbc024 */
   --accent-lift: 0;
   --accent-chroma: 1;
   --hover-lift: 0.035;
@@ -86,6 +103,19 @@
   --edge-depth: 0.7;
   --edge-chroma: 0.78;
   --edge-max-l: 1;
+
+  --azure-l: 0.6793;
+  --azure-c: 0.165;
+  --azure-h: 245.33;
+  --scarlet-l: 0.6703;
+  --scarlet-c: 0.2096;
+  --scarlet-h: 24.81;
+  --tangerine-l: 0.7499;
+  --tangerine-c: 0.1666;
+  --tangerine-h: 55.11;
+  --gold-l: 0.8388;
+  --gold-c: 0.1647;
+  --gold-h: 84.96;
 
   /* scarlet and azure fills miss AA on their dark tints */
   --azure-ink: #2da1f3;
@@ -104,24 +134,11 @@
 
 :root,
 [data-tone] {
-  /* Analogous complement: scarlet, tangerine, and gold sit together, opposite
-     azure. Base L C H are the given hexes (#1b9ff6, #fc4f4f, #fc8d31, #fbc024),
-     shown unchanged in dark mode. --X-shade is the hue a shadow turns toward. */
-  --azure-l: 0.6793;
-  --azure-c: 0.165;
-  --azure-h: 245.33;
+  /* Each theme sets its own L, C, and H. Scarlet, tangerine, and gold sit
+     together, opposite azure. --X-shade is the hue a shadow turns toward. */
   --azure-shade: 12;
-  --scarlet-l: 0.6703;
-  --scarlet-c: 0.2096;
-  --scarlet-h: 24.81;
   --scarlet-shade: -8;
-  --tangerine-l: 0.7499;
-  --tangerine-c: 0.1666;
-  --tangerine-h: 55.11;
   --tangerine-shade: -14;
-  --gold-l: 0.8388;
-  --gold-c: 0.1647;
-  --gold-h: 84.96;
   --gold-shade: -18;
 
   --azure: oklch(
