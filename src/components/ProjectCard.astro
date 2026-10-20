@@ -12,13 +12,12 @@ interface Props {
 const { project } = Astro.props;
 const { title, summary, accent, year, ongoing, kind, href, thumbnail } = project.data;
 const small = kind === 'small';
-/* A small build without a link yet renders as a plain card, not a dead link. */
-const Wrapper = small && !href ? 'div' : 'a';
-const linkProps = small
-  ? href
+/* An external href leaves the site. Otherwise the card opens its project page. */
+const Wrapper = 'a';
+const linkProps =
+  small && href
     ? { href, target: '_blank', rel: 'noopener noreferrer' }
-    : {}
-  : { href: `/projects/${project.id}` };
+    : { href: `/projects/${project.id}` };
 ---
 
 <Wrapper class:list={['card', { 'card--small': small }]} {...linkProps}>

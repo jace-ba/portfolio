@@ -4,4 +4,8 @@ summary: Rope physics with collisions, a digit recognizer running ported MLP wei
 accent: azure
 order: 10
 kind: small
+documents:
+  - label: Scratch projects
+    href: https://scratch.mit.edu/studios/52054133
+    variant: tangerine
 ---

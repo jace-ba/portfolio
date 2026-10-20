@@ -4,18 +4,26 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import IsoButton from '../../components/IsoButton.astro';
 import Icon from '../../components/Icon.astro';
 import ProjectMeta from '../../components/ProjectMeta.astro';
-import { getMainProjects } from '../../lib/projects';
+import { getProjects } from '../../lib/projects';
 
 export async function getStaticPaths() {
-  const projects = await getMainProjects();
-  return projects.map((project, i) => ({
-    params: { id: project.id },
-    props: {
-      project,
-      prev: projects[(i - 1 + projects.length) % projects.length],
-      next: projects[(i + 1) % projects.length],
-    },
-  }));
+  const projects = await getProjects();
+  const lists = {
+    project: projects.filter((project) => project.data.kind === 'project'),
+    small: projects.filter((project) => project.data.kind === 'small'),
+  };
+  return projects.map((project) => {
+    const list = lists[project.data.kind];
+    const i = list.findIndex((item) => item.id === project.id);
+    return {
+      params: { id: project.id },
+      props: {
+        project,
+        prev: list[(i - 1 + list.length) % list.length],
+        next: list[(i + 1) % list.length],
+      },
+    };
+  });
 }
 
 const { project, prev, next } = Astro.props;
@@ -66,7 +74,7 @@ const filled = hasWriteUp || documents?.some((doc) => doc.preview) === true;
                   </a>
                 )}
                 {doc.label && (
-                  <IsoButton href={doc.href} target="_blank" rel="noopener noreferrer">
+                  <IsoButton href={doc.href} variant={doc.variant} target="_blank" rel="noopener noreferrer">
                     {doc.label}
                     <Icon name="external" />
                     <span class="visually-hidden">(opens in a new tab)</span>

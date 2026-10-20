@@ -10,7 +10,7 @@ export async function getMainProjects() {
   return (await getProjects()).filter((p) => p.data.kind === 'project');
 }
 
-/** Single-card builds that link out instead of having a detail page. */
+/** Cards in the For fun section. */
 export async function getSmallBuilds() {
   return (await getProjects()).filter((p) => p.data.kind === 'small');
 }

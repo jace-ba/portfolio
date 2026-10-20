@@ -20,7 +20,7 @@ const projects = defineCollection({
     /** Lower comes first. */
     order: z.number().int().default(100),
     featured: z.boolean().default(false),
-    /** `project` gets a detail page; `small` is a single card on the Projects page. */
+    /** `project` is a main card. `small` is a card under For fun. Both have a detail page. */
     kind: z.enum(['project', 'small']).default('project'),
     /** External link for a small build. */
     href: z.url().optional(),
@@ -30,6 +30,8 @@ const projects = defineCollection({
         z.object({
           /** Button label. Omitted when a caption is the link. */
           label: z.string().optional(),
+          /** Button color. Omitted buttons stay neutral. */
+          variant: z.enum(accents).optional(),
           /** Shown under a preview and linked with it. */
           caption: z.string().optional(),
           href: z.union([z.string().startsWith('/'), z.url()]),
