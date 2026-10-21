@@ -138,7 +138,10 @@ const Tag = href ? 'a' : 'button';
   /* The face slides toward its seat as --press rises, so a pointer on the
      top edge would otherwise miss mouseup after the press animation. This
      plate stays on the resting face — same size and radius — and keeps that
-     pointer on the control. It is not painted. A seated face does not travel. */
+     pointer on the control. It is not painted. It also stays through a press
+     that is already held down, so the finger still lands on the control.
+     A seated face, with the pointer up, does not travel, and the plate would
+     sit on empty space above it. */
   .iso-btn::after {
     content: '';
     position: absolute;
@@ -149,7 +152,7 @@ const Tag = href ? 'a' : 'button';
       calc(var(--dy) - var(--r) * cos(var(--theta)))
     );
   }
-  .iso-btn.is-pressed::after {
+  .iso-btn.is-pressed:not(:active)::after {
     content: none;
   }
 

@@ -59,9 +59,57 @@ import { navItems, isCurrentPage } from '../lib/nav';
     });
   }
 
+  function navLink(target: EventTarget | null): HTMLAnchorElement | null {
+    if (!(target instanceof Element)) return null;
+    const link = target.closest('.site-nav a.iso-btn');
+    return link instanceof HTMLAnchorElement ? link : null;
+  }
+
+  // A tap drops :active when the finger lifts, and the click that seats the
+  // destination runs in a later task. The release spring paints in that gap,
+  // so the key pops up and then presses again. Hold the face down from the
+  // press itself. seat() keeps it when the tap navigates; a press that never
+  // does lets go.
+  let held: HTMLAnchorElement | null = null;
+  let holdTimer = 0;
+
+  function releaseHold() {
+    window.clearTimeout(holdTimer);
+    const link = held;
+    held = null;
+    if (link && link.getAttribute('aria-current') !== 'page') link.classList.remove('is-pressed');
+  }
+
+  document.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    const link = navLink(event.target);
+    if (!link || link.getAttribute('aria-current') === 'page') return;
+    releaseHold();
+    link.classList.add('is-pressed');
+    held = link;
+  });
+
+  document.addEventListener('pointerup', (event) => {
+    if (!held || event.button !== 0) return;
+    if (navLink(event.target) !== held) {
+      releaseHold();
+      return;
+    }
+    // Longer than the pause before a tap's click, including older browsers
+    // that wait to rule out a double-tap zoom. A long-press menu never clicks.
+    holdTimer = window.setTimeout(releaseHold, 500);
+  });
+
+  document.addEventListener('pointercancel', releaseHold);
+  document.addEventListener('contextmenu', releaseHold);
+
   // Seat the destination as soon as navigation starts; the old button's
   // release keeps running while the next page loads and swaps in.
-  document.addEventListener('astro:before-preparation', (e) => seat(e.to.pathname));
+  document.addEventListener('astro:before-preparation', (e) => {
+    window.clearTimeout(holdTimer);
+    held = null;
+    seat(e.to.pathname);
+  });
   document.addEventListener('astro:after-swap', () => {
     seat(location.pathname);
     placeDot(location.pathname);
@@ -72,11 +120,22 @@ import { navItems, isCurrentPage } from '../lib/nav';
   document.addEventListener(
     'click',
     (event) => {
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
-      const target = event.target;
-      const link = target instanceof Element ? target.closest('a.iso-btn') : null;
-      if (link?.closest('.site-nav') && link.getAttribute('aria-current') === 'page') {
+      const plain =
+        event.button === 0 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+      const link = navLink(event.target);
+      if (!plain) {
+        releaseHold();
+        return;
+      }
+      if (link?.getAttribute('aria-current') === 'page') {
         event.preventDefault();
+        return;
+      }
+      if (held && link === held) {
+        window.clearTimeout(holdTimer);
+        held = null;
+      } else if (held) {
+        releaseHold();
       }
     },
     true,
