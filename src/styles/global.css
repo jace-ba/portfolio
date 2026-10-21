@@ -149,20 +149,6 @@ a {
   display: none;
 }
 
-/* Safari 26 paints the status bar from a fixed strip at the top of the page
-   and ignores theme-color. It stays under the header. A negative z-index,
-   which the splash canvas needs, is not sampled. */
-#theme-chrome {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 8px;
-  z-index: 4;
-  pointer-events: none;
-  background: var(--bg);
-}
-
 html.flooding #flood {
   display: block;
 }
