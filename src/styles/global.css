@@ -137,15 +137,30 @@ a {
   white-space: nowrap;
 }
 
-/* Painted behind the page. Shown only while a splash is running. */
+/* Painted behind the page. Shown only while a splash is running.
+   Absolute, not fixed: iOS clips a fixed layer short of the screen and
+   leaves the old color in the gap. The script places and sizes it. */
 #flood {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
   z-index: -1;
   pointer-events: none;
   display: none;
+}
+
+/* Safari 26 paints the status bar from a fixed strip at the top of the page
+   and ignores theme-color. It stays under the header. A negative z-index,
+   which the splash canvas needs, is not sampled. */
+#theme-chrome {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--bg);
 }
 
 html.flooding #flood {
@@ -186,6 +201,9 @@ html.flooding [data-flood-line] {
   inset: 0;
   margin: 0;
   pointer-events: none;
+  /* A clip-path change on a composited layer does not repaint in iOS Safari.
+     The copy keeps its own mask layer so the slice can move. */
+  will-change: clip-path;
 }
 [data-flood-clone],
 [data-flood-clone] * {

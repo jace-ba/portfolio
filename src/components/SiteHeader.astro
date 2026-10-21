@@ -169,6 +169,12 @@ import ThemeToggle from './ThemeToggle.astro';
     will-change: transform;
   }
 
+  /* That layer keeps the rounded corner in one texture. iOS does not
+     repaint a clip inside it, so the bar would stay the color it started as. */
+  :global(html.flooding) .bar > .bar-fill {
+    will-change: auto;
+  }
+
   .bar-fill {
     background: var(--surface);
   }

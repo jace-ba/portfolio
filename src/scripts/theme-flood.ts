@@ -119,6 +119,9 @@ function watchViewport() {
   watching = true;
   window.addEventListener('scroll', markRectsStale, { capture: true, passive: true });
   window.addEventListener('resize', markRectsStale);
+  // The iOS toolbar moves the visual viewport without a window scroll.
+  window.visualViewport?.addEventListener('scroll', markRectsStale);
+  window.visualViewport?.addEventListener('resize', markRectsStale);
 }
 
 function unwatchViewport() {
@@ -126,6 +129,8 @@ function unwatchViewport() {
   watching = false;
   window.removeEventListener('scroll', markRectsStale, { capture: true });
   window.removeEventListener('resize', markRectsStale);
+  window.visualViewport?.removeEventListener('scroll', markRectsStale);
+  window.visualViewport?.removeEventListener('resize', markRectsStale);
   rectsStale = false;
 }
 
@@ -178,30 +183,48 @@ function ms(name: string, fallback: number) {
   return fallback;
 }
 
-/** The canvas covers the layout viewport, which excludes the scrollbar.
-    innerWidth includes it, so sizing from that scales every point toward the corner. */
+/** The visible page. clientWidth excludes the scrollbar; innerWidth includes
+    it, so sizing from that scales every point toward the corner. On iPhone
+    the layout viewport, the visual viewport, and the window height disagree,
+    and a fixed layer is clipped short of the glass. Take the tallest, and
+    place the canvas over the visual viewport. */
 function viewport() {
-  const view = document.documentElement;
-  return { width: view.clientWidth, height: view.clientHeight };
+  const vv = window.visualViewport;
+  const width = document.documentElement.clientWidth;
+  const height = Math.max(
+    document.documentElement.clientHeight,
+    window.innerHeight,
+    vv?.height ?? 0,
+  );
+  return {
+    left: window.scrollX + (vv?.offsetLeft ?? 0),
+    top: window.scrollY + (vv?.offsetTop ?? 0),
+    width,
+    height,
+  };
 }
 
 function fit() {
   if (!canvas || !ctx) return;
-  const { width: viewW, height: viewH } = viewport();
-  if (viewW < 1 || viewH < 1) return;
+  const view = viewport();
+  if (view.width < 1 || view.height < 1) return;
+  canvas.style.left = `${view.left}px`;
+  canvas.style.top = `${view.top}px`;
+  canvas.style.width = `${view.width}px`;
+  canvas.style.height = `${view.height}px`;
   const dpr = Math.min(devicePixelRatio || 1, 2);
-  const width = Math.round(viewW * dpr);
-  const height = Math.round(viewH * dpr);
+  const width = Math.round(view.width * dpr);
+  const height = Math.round(view.height * dpr);
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
   }
-  // Browser zoom keeps viewW * dpr constant, so the bitmap often does not
+  // Browser zoom keeps view.width * dpr constant, so the bitmap often does not
   // change. The scale still has to follow the new CSS size, or the splash
   // stays where it was at the previous zoom.
-  ctx.setTransform(width / viewW, 0, 0, height / viewH, 0, 0);
-  cw = viewW;
-  ch = viewH;
+  ctx.setTransform(width / view.width, 0, 0, height / view.height, 0, 0);
+  cw = view.width;
+  ch = view.height;
 }
 
 function makeShape(): Wave[] {
@@ -323,10 +346,26 @@ function clipFor(pts: Float64Array, ox: number, oy: number) {
   return `polygon(${clipParts.join(',')})`;
 }
 
+const clipAnim = new WeakMap<HTMLElement, Animation>();
+
 function setClip(layer: HTMLElement, value: string) {
   if (lastClip.get(layer) === value) return;
   lastClip.set(layer, value);
   layer.style.clipPath = value;
+  // Assigning clip-path does not repaint a composited layer in iOS Safari,
+  // so the header copy stays clipped to nothing and the bar never changes.
+  // A fill of the same polygon does.
+  clipAnim.get(layer)?.cancel();
+  clipAnim.set(
+    layer,
+    layer.animate(
+      [
+        { clipPath: value, offset: 0 },
+        { clipPath: value, offset: 1 },
+      ],
+      { duration: 1, fill: 'forwards' },
+    ),
+  );
 }
 
 function updateClip(flood: Flood, layer: HTMLElement) {
@@ -431,6 +470,7 @@ function sampleStyle(el: Element, style: CSSStyleDeclaration): Sample {
 function isSkipped(el: Element) {
   return (
     el.id === 'flood' ||
+    el.id === 'theme-chrome' ||
     SKIP_TAGS.has(el.tagName) ||
     !!el.closest('.katex-mathml') ||
     !!el.closest('[hidden]') ||
@@ -834,6 +874,17 @@ export function endFlood() {
   settle();
 }
 
+/** iOS keeps a sticky layer's texture after the colors under it change, so the
+    bar stays on the theme the splash started from. */
+function repaintHeader() {
+  const sticky = document.querySelector('.header-sticky');
+  if (!(sticky instanceof HTMLElement)) return;
+  sticky.style.transform = 'translateZ(0)';
+  void sticky.offsetWidth;
+  sticky.style.removeProperty('transform');
+  if (!sticky.getAttribute('style')) sticky.removeAttribute('style');
+}
+
 /** Leave splash mode. Drop the recorded colors only after the flood rules are
     gone, so a fade that is still running is not retargeted. */
 function settle() {
@@ -854,6 +905,7 @@ function settle() {
       el.style.removeProperty('--flood-border');
     }
   });
+  repaintHeader();
 }
 
 function readLive() {
@@ -942,14 +994,17 @@ function tick(now: number) {
     paint(job.el, job.tone, hidden, hidden ? undefined : live.get(job.el));
     shown[job.i] = job.tone;
   }
+  let covered = false;
   while (floods.length && now - floods[0].start >= duration) {
     const done = floods.shift();
     if (!done) break;
+    covered = true;
     floorTone = done.tone;
     setFloor(done.color);
     for (const host of done.hosts) paint(host, done.tone, true);
     for (const layer of done.layers) layer.remove();
   }
+  if (covered) repaintHeader();
   releaseFinished();
   if (floods.length) {
     raf = requestAnimationFrame(tick);
@@ -1045,5 +1100,6 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   });
   measureHosts();
   watchViewport();
+  repaintHeader();
   if (!raf) raf = requestAnimationFrame(tick);
 }
