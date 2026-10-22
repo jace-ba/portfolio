@@ -9,7 +9,7 @@ import ThemeToggle from './ThemeToggle.astro';
   <!-- Page color behind the bar, including the gutters, so content scrolling
        under the pinned header stays hidden. Its bottom stops where the bar's
        corner curve starts, so content stays visible in the cutouts until it
-       passes under the bar. Fades with the theme splash. -->
+       passes under the bar. Sliced with the theme splash. -->
   <div class="header-scrim" data-flood-host aria-hidden="true"></div>
   <div class="container header-wrap">
     <header class="site-header">
@@ -160,9 +160,9 @@ import ThemeToggle from './ThemeToggle.astro';
     pointer-events: none;
   }
 
-  /* The fill and its splash copy share the bar's rounded clip. The overscan
-     keeps their edges outside that curve, so the corner does not show a
-     fringe of the page. */
+  /* The fill and its splash copies must share one compositor layer. Rounded
+     separately, the old color shows through the new one's antialiased corners.
+     The overscan keeps their own edges, which can land mid-pixel, outside the clip. */
   .bar > .bar-fill {
     position: absolute;
     inset: -2px;

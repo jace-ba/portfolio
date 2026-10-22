@@ -5,14 +5,12 @@
 // wave reaches in the same moment, inherits the fade instead. A CSS transition
 // would jump back to the original color when
 // an ancestor restyles, and a background transition can also be drawn one
-// frame late by the compositor. The logo and page titles are drawn again
-// inside themselves: the copy is clipped to the same polygon the background
-// canvas fills, so the edge cannot drift. That clip is rewritten only while
-// the polygon actually cuts the copy. The header scrim and the bar fill fade
-// with one opacity animation on their copy, then the sticky layer under that
-// copy is replaced while the copy still covers it. Buttons stay whole and
-// keep tilting. A second press before the splash settles pours the other
-// color over the first.
+// frame late by the compositor. The nav bar, the logo, and page titles are
+// drawn again inside themselves: the copy is clipped to the same polygon the
+// background canvas fills, so the edge cannot drift. That clip is rewritten
+// only while the polygon actually cuts the copy. Buttons stay whole and keep
+// tilting. A second press before the splash settles pours the other color
+// over the first.
 
 type Tone = 'light' | 'dark';
 
@@ -92,22 +90,6 @@ let cleanupTimer = 0;
 let cw = 0;
 let ch = 0;
 let duration = 1200;
-/** Viewport point (0, 0) in canvas pixels. The canvas is anchored to the
-    layout top; element boxes are measured from the visual viewport. */
-let originX = 0;
-let originY = 0;
-/** Cached `100lvh` in CSS pixels. Zero forces a fresh measure. */
-let largePx = 0;
-
-type SolidFade = {
-  layer: HTMLElement;
-  host: HTMLElement;
-  at: number;
-  anim: Animation | null;
-  retired: boolean;
-};
-/** Scrim and bar-fill copies. One opacity animation each, not a clip. */
-let solidFades: SolidFade[] = [];
 
 const ampSum = WAVES.reduce((sum, wave) => sum + wave[1], 0);
 const cover = 1.02 / Math.max(0.3, 1 - ampSum * (1 - SMOOTHING));
@@ -137,9 +119,6 @@ function watchViewport() {
   watching = true;
   window.addEventListener('scroll', markRectsStale, { capture: true, passive: true });
   window.addEventListener('resize', markRectsStale);
-  // The iOS toolbar moves the visual viewport without a window scroll.
-  window.visualViewport?.addEventListener('scroll', markRectsStale);
-  window.visualViewport?.addEventListener('resize', markRectsStale);
 }
 
 function unwatchViewport() {
@@ -147,8 +126,6 @@ function unwatchViewport() {
   watching = false;
   window.removeEventListener('scroll', markRectsStale, { capture: true });
   window.removeEventListener('resize', markRectsStale);
-  window.visualViewport?.removeEventListener('scroll', markRectsStale);
-  window.visualViewport?.removeEventListener('resize', markRectsStale);
   rectsStale = false;
 }
 
@@ -160,9 +137,7 @@ function measureHosts() {
       const host = layer.parentElement;
       if (!(host instanceof HTMLElement) || hostRects.has(host)) continue;
       const rect = layer.getBoundingClientRect();
-      const top = rect.top + originY;
-      const bottom = rect.bottom + originY;
-      if (rect.width > 0 && bottom > 0 && top < view.height) hostRects.set(host, rect);
+      if (rect.width > 0 && rect.bottom > 0 && rect.top < view.height) hostRects.set(host, rect);
     }
   }
 }
@@ -203,73 +178,30 @@ function ms(name: string, fallback: number) {
   return fallback;
 }
 
-/** `100lvh` is the viewport with the browser toolbar hidden. On a desktop
-    window that is the window. On a phone it is taller than the visual
-    viewport by the strip under the bottom glass. */
-function largeViewportHeight() {
-  if (largePx > 0) return largePx;
-  const probe = document.createElement('div');
-  probe.style.cssText =
-    'position:absolute;left:0;top:0;height:100lvh;width:0;visibility:hidden;pointer-events:none';
-  probe.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(probe);
-  const measured = probe.offsetHeight;
-  probe.remove();
-  if (measured > 0) largePx = measured;
-  return measured;
-}
-
-/** The splash box. clientWidth excludes the scrollbar; innerWidth includes
-    it, so sizing from that scales every point toward the corner. The page
-    already starts under the status bar (`viewport-fit=cover`), so this box
-    starts at the layout top, which includes that inset. Its height reaches
-    the bottom of the large viewport, including the area under the toolbar.
-    A fixed layer is what iOS clips short of that edge, so the canvas stays
-    absolute and is placed in document coordinates. */
+/** The canvas covers the layout viewport, which excludes the scrollbar.
+    innerWidth includes it, so sizing from that scales every point toward the corner. */
 function viewport() {
-  const vv = window.visualViewport;
-  const offsetLeft = vv?.offsetLeft ?? 0;
-  const offsetTop = vv?.offsetTop ?? 0;
-  originX = offsetLeft;
-  originY = offsetTop;
-  const width = document.documentElement.clientWidth;
-  const large = largeViewportHeight();
-  const visualBottom = offsetTop + (vv?.height ?? 0);
-  const height = Math.max(
-    document.documentElement.clientHeight,
-    window.innerHeight,
-    large,
-    visualBottom,
-  );
-  return {
-    left: window.scrollX,
-    top: window.scrollY,
-    width,
-    height,
-  };
+  const view = document.documentElement;
+  return { width: view.clientWidth, height: view.clientHeight };
 }
 
 function fit() {
   if (!canvas || !ctx) return;
-  const view = viewport();
-  if (view.width < 1 || view.height < 1) return;
-  canvas.style.left = `${view.left}px`;
-  canvas.style.top = `${view.top}px`;
-  canvas.style.width = `${view.width}px`;
-  canvas.style.height = `${view.height}px`;
+  const { width: viewW, height: viewH } = viewport();
+  if (viewW < 1 || viewH < 1) return;
   const dpr = Math.min(devicePixelRatio || 1, 2);
-  const width = Math.round(view.width * dpr);
-  const height = Math.round(view.height * dpr);
+  const width = Math.round(viewW * dpr);
+  const height = Math.round(viewH * dpr);
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
   }
-  // Browser zoom keeps view.width * dpr constant, so the bitmap often does not
+  // Browser zoom keeps viewW * dpr constant, so the bitmap often does not
   // change. The scale still has to follow the new CSS size, or the splash
   // stays where it was at the previous zoom.
-  ctx.setTransform(width / view.width, 0, 0, height / view.height, 0, 0);
-  cw = view.width;
-  ch = view.height;
+  ctx.setTransform(width / viewW, 0, 0, height / viewH, 0, 0);
+  cw = viewW;
+  ch = viewH;
 }
 
 function makeShape(): Wave[] {
@@ -398,31 +330,30 @@ function setClip(layer: HTMLElement, value: string) {
 }
 
 function updateClip(flood: Flood, layer: HTMLElement) {
-  if (layer.hasAttribute('data-flood-fade')) return;
   const host = layer.parentElement;
   if (!(host instanceof HTMLElement)) return;
   const rect = hostRects.get(host);
   if (!rect) return;
-  const left = rect.left + originX - INK;
-  const top = rect.top + originY - INK;
-  const right = rect.right + originX + INK;
-  const bottom = rect.bottom + originY + INK;
+  const left = rect.left - INK;
+  const top = rect.top - INK;
+  const right = rect.right + INK;
+  const bottom = rect.bottom + INK;
   // Both this polygon and the one already clipped contain the whole copy, so
   // leaving the clip alone paints the same pixels and skips a style recalc.
-    if (rectInside(left, top, right, bottom, flood.cx, flood.cy, flood.rIn)) {
-      if (!clipHolds.get(layer)) {
-        setClip(layer, clipFor(flood.pts, rect.left + originX, rect.top + originY));
-        clipHolds.set(layer, true);
-      }
-      return;
+  if (rectInside(left, top, right, bottom, flood.cx, flood.cy, flood.rIn)) {
+    if (!clipHolds.get(layer)) {
+      setClip(layer, clipFor(flood.pts, rect.left, rect.top));
+      clipHolds.set(layer, true);
     }
-    if (clipHolds.get(layer)) clipHolds.set(layer, false);
-    if (rectOutside(left, top, right, bottom, flood.cx, flood.cy, flood.rOut)) {
-      setClip(layer, EMPTY_CLIP);
-      return;
-    }
-    setClip(layer, clipFor(flood.pts, rect.left + originX, rect.top + originY));
+    return;
   }
+  if (clipHolds.get(layer)) clipHolds.set(layer, false);
+  if (rectOutside(left, top, right, bottom, flood.cx, flood.cy, flood.rOut)) {
+    setClip(layer, EMPTY_CLIP);
+    return;
+  }
+  setClip(layer, clipFor(flood.pts, rect.left, rect.top));
+}
 
 function hosts() {
   return [...document.querySelectorAll<HTMLElement>('[data-flood-host]')].filter(
@@ -462,17 +393,9 @@ function buildLayers(tone: Tone) {
     clone.dataset.floodClone = '';
     clone.inert = true;
     clone.setAttribute('aria-hidden', 'true');
-    // The scrim and the bar are one band each. A moving clip never repaints
-    // on the sticky layer, so the copy fades in as a whole, like any other
-    // element the wave reaches.
-    if (host.classList.contains('header-scrim') || host.classList.contains('bar-fill')) {
-      clone.style.opacity = '0';
-      clone.setAttribute('data-flood-fade', '');
-    } else {
-      clone.style.clipPath = EMPTY_CLIP;
-      lastClip.set(clone, EMPTY_CLIP);
-      clipHolds.set(clone, false);
-    }
+    clone.style.clipPath = EMPTY_CLIP;
+    lastClip.set(clone, EMPTY_CLIP);
+    clipHolds.set(clone, false);
     host.append(clone);
     hostList.push(host);
     layers.push(clone);
@@ -518,10 +441,7 @@ function isSkipped(el: Element) {
 /** Arrival along the splash, without the lead. Two elements within FOLLOW_MS
     of each other would overlap their fades anyway. */
 function waveAt(rect: DOMRect, cx: number, cy: number, Rmax: number) {
-  const dist = Math.hypot(
-    rect.left + rect.width / 2 + originX - cx,
-    rect.top + rect.height / 2 + originY - cy,
-  );
+  const dist = Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy);
   return easeInv(Math.min(1, dist / Math.max(Rmax, 1))) * duration;
 }
 
@@ -890,48 +810,8 @@ function clearTones() {
   arrived = new Set();
 }
 
-/** The copy is fully covering the band. Swap the host for a new node so a
-    sticky layer cannot keep the old texture, then drop the copy. Both are the
-    destination color, so the swap does not show. */
-function retireSolid(host: HTMLElement) {
-  const clones = [...host.querySelectorAll<HTMLElement>(':scope > [data-flood-clone]')];
-  if (!host.isConnected || clones.length === 0) {
-    for (const fade of solidFades) if (fade.host === host) fade.retired = true;
-    return;
-  }
-  const parent = host.parentElement;
-  if (!parent) return;
-  const fresh = host.cloneNode(false) as HTMLElement;
-  fresh.removeAttribute('style');
-  const shown = clones[clones.length - 1]?.getAttribute('data-tone');
-  if (shown === 'light' || shown === 'dark') fresh.setAttribute('data-tone', shown);
-  else fresh.removeAttribute('data-tone');
-  for (const clone of clones) fresh.append(clone);
-  parent.replaceChild(fresh, host);
-  for (const flood of floods) {
-    const index = flood.hosts.indexOf(host);
-    if (index >= 0) flood.hosts[index] = fresh;
-  }
-  for (const fade of solidFades) {
-    if (fade.host !== host) continue;
-    fade.host = fresh;
-    fade.retired = true;
-    fade.anim?.cancel();
-    fade.anim = null;
-  }
-  for (const clone of clones) clone.remove();
-}
-
 function removeClones() {
-  const hosts = new Set<HTMLElement>();
-  document.querySelectorAll<HTMLElement>('[data-flood-fade]').forEach((clone) => {
-    const host = clone.parentElement;
-    if (host instanceof HTMLElement && host.hasAttribute('data-flood-host')) hosts.add(host);
-  });
-  for (const host of hosts) retireSolid(host);
   document.querySelectorAll('[data-flood-clone]').forEach((node) => node.remove());
-  for (const fade of solidFades) fade.anim?.cancel();
-  solidFades = [];
 }
 
 /** The color still showing beyond the wave. An inline longhand, not an
@@ -961,11 +841,6 @@ function settle() {
   raf = 0;
   tail = false;
   unwatchViewport();
-  for (const fade of solidFades) {
-    if (!fade.retired) retireSolid(fade.host);
-  }
-  for (const fade of solidFades) fade.anim?.cancel();
-  solidFades = [];
   root.classList.remove('flooding');
   root.style.removeProperty('color-scheme');
   stopFades();
@@ -997,70 +872,14 @@ function readLive() {
 }
 
 function offscreen(rect: DOMRect, viewW: number, viewH: number) {
-  const top = rect.top + originY;
-  const bottom = rect.bottom + originY;
-  const left = rect.left + originX;
-  const right = rect.right + originX;
-  return bottom < -INK || top > viewH + INK || right < -INK || left > viewW + INK;
+  return (
+    rect.bottom < -INK ||
+    rect.top > viewH + INK ||
+    rect.right < -INK ||
+    rect.left > viewW + INK
+  );
 }
 
-
-function scheduleSolidFades(
-  layers: HTMLElement[],
-  cx: number,
-  cy: number,
-  Rmax: number,
-  start: number,
-  lead: number,
-) {
-  for (const layer of layers) {
-    if (!layer.hasAttribute('data-flood-fade')) continue;
-    const host = layer.parentElement;
-    if (!(host instanceof HTMLElement)) continue;
-    const rect = hostRects.get(host) ?? host.getBoundingClientRect();
-    const dist = Math.hypot(
-      rect.left + rect.width / 2 + originX - cx,
-      rect.top + rect.height / 2 + originY - cy,
-    );
-    const at = start + Math.max(0, easeInv(Math.min(1, dist / Math.max(Rmax, 1))) * duration - lead);
-    solidFades.push({ layer, host, at, anim: null, retired: false });
-  }
-}
-
-function solidsOpen() {
-  for (const fade of solidFades) if (!fade.retired) return true;
-  return false;
-}
-
-/** Ease the scrim and the bar the way other elements ease: one animation when
-    the wave reaches them. Replacing the host waits until the copy is opaque. */
-function tickSolidFades(now: number) {
-  for (const fade of solidFades) {
-    if (fade.retired) continue;
-    if (!fade.layer.isConnected) {
-      fade.retired = true;
-      continue;
-    }
-    if (!fade.anim && now >= fade.at) {
-      fade.anim = fade.layer.animate([{ opacity: 0 }, { opacity: 1 }], {
-        duration: fadeMs,
-        easing: 'ease',
-        fill: 'forwards',
-      });
-    }
-    if (!fade.anim || fade.anim.playState !== 'finished') continue;
-    const covers = fade.host.querySelectorAll(':scope > [data-flood-fade]');
-    const top = covers[covers.length - 1];
-    if (top !== fade.layer) {
-      fade.layer.remove();
-      fade.retired = true;
-      fade.anim.cancel();
-      fade.anim = null;
-      continue;
-    }
-    retireSolid(fade.host);
-  }
-}
 
 function tick(now: number) {
   raf = 0;
@@ -1129,13 +948,10 @@ function tick(now: number) {
     floorTone = done.tone;
     setFloor(done.color);
     for (const host of done.hosts) paint(host, done.tone, true);
-    for (const layer of done.layers) {
-      if (!layer.hasAttribute('data-flood-fade')) layer.remove();
-    }
+    for (const layer of done.layers) layer.remove();
   }
-  tickSolidFades(now);
   releaseFinished();
-  if (floods.length || solidsOpen()) {
+  if (floods.length) {
     raf = requestAnimationFrame(tick);
     return;
   }
@@ -1168,11 +984,10 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     fadeMs = ms('--dur-flood-fade', 250);
   }
 
-  if (fresh) largePx = 0;
-  const view = viewport();
   const box = origin.getBoundingClientRect();
-  const cx = box.left + box.width / 2 + originX;
-  const cy = box.top + box.height / 2 + originY;
+  const cx = box.left + box.width / 2;
+  const cy = box.top + box.height / 2;
+  const view = viewport();
   const far = Math.hypot(Math.max(cx, view.width - cx), Math.max(cy, view.height - cy));
   const Rmax = far * cover;
   const oldBg = fresh ? getComputedStyle(document.body).backgroundColor : null;
@@ -1200,11 +1015,8 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
   const lead = ms('--dur-flood-lead', 120);
   const start = performance.now();
   const arr = rects.map((rect) => {
-    const dist = Math.hypot(
-      rect.left + rect.width / 2 + originX - cx,
-      rect.top + rect.height / 2 + originY - cy,
-    );
-    return start + Math.max(0, easeInv(Math.min(1, dist / Math.max(Rmax, 1))) * duration - lead);
+    const dist = Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy);
+    return start + Math.max(0, easeInv(Math.min(1, dist / Rmax)) * duration - lead);
   });
   commit(next);
   if (fresh) {
@@ -1232,7 +1044,6 @@ export function floodTo(origin: Element, commit: (theme: Tone) => void) {
     rOut: 0,
   });
   measureHosts();
-  scheduleSolidFades(built.layers, cx, cy, Rmax, start, lead);
   watchViewport();
   if (!raf) raf = requestAnimationFrame(tick);
 }
